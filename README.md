@@ -140,16 +140,14 @@ Note that these SDKs are not under the same license as Falcor, see [LICENSE.md](
 - [Slang](https://github.com/shader-slang/slang): Falcor's shading language and compiler.
 
 ## Citation
-If you use Falcor in a research project leading to a publication, please cite the project.
-The BibTex entry is
 
 ```bibtex
-@Misc{Kallweit22,
-   author =      {Simon Kallweit and Petrik Clarberg and Craig Kolb and Tom{'a}{\v s} Davidovi{\v c} and Kai-Hwa Yao and Theresa Foley and Yong He and Lifan Wu and Lucy Chen and Tomas Akenine-M{\"o}ller and Chris Wyman and Cyril Crassin and Nir Benty},
-   title =       {The {Falcor} Rendering Framework},
-   year =        {2022},
-   month =       {8},
-   url =         {https://github.com/NVIDIAGameWorks/Falcor},
-   note =        {\url{https://github.com/NVIDIAGameWorks/Falcor}}
+@inproceedings{hong2025partition,
+  title       = {Sample Space Partitioning and Spatiotemporal Resampling for Specular Manifold Sampling},
+  author      = {Hong, Pengpei and Duan, Meng and Wang, Beibei and Yuksel, Cem and Zeltner, Tizian and Lin, Daqi},
+  month       = {December},
+  journal     = {SIGGRAPH Asia (Conference Track)},
+  year        = {2025},
+  doi         = {10.1145/3757377.3763927},
 }
 ```
