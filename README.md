@@ -13,7 +13,7 @@ https://research.nvidia.com/labs/rtr/publication/hong2025partition/
 
 ---
 
-The method is implemented in Falcor 8.0 as a rendering module named **PSMSReSTIR** (Partitioned SMS ReSTIR).  
+The method is implemented in Falcor 8.0 as a rendering module named **PSMSReSTIR** (Partitioned-SMS ReSTIR).  
 After building the project, run `YourBuildDirectory/bin/Release/Mogwai.exe`. Then choose a script from the `scripts/` directory to load the desired scene.
 
 The **DoubleRefractiveSlabs** and **ReflectivePlane** scenes include animations with a moving light source.  
