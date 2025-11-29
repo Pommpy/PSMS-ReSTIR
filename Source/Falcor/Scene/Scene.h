@@ -1374,6 +1374,7 @@ namespace Falcor
             UpdateMode updateMode = UpdateMode::Rebuild;    ///< Update mode this TLAS was created with.
         };
 
+        std::unordered_set<uint32_t> mTlasRayTypeCounts;    /// stores all kinds of ray type counts
         std::unordered_map<uint32_t, TlasData> mTlasCache;  ///< Top Level Acceleration Structure for scene data cached per shader ray type count.
                                                             ///< Number of ray types in program affects Shader Table indexing.
         ref<Buffer> mpTlasScratch;                          ///< Scratch buffer used for TLAS builds. Can be shared as long as instance desc count is the same, which for now it is.
@@ -1435,6 +1436,8 @@ namespace Falcor
         std::vector<std::filesystem::path> mImportPaths;    ///< Vector of paths to assets loaded to create scene.
         std::vector<SceneData::ImportDict> mImportDicts;    ///< Vector of dictionaries associated with each asset loaded to create scene.
         bool mFinalized = false;                            ///< True if scene is ready to be bound to the GPU.
+
+        uint32_t mFrameIndex = 0; // either 0 or 1, indicate which one is the current frame BVH in mTlasCache
 
         /// Used for very large scenes
         SplitIndexBuffer mMeshIndexData;

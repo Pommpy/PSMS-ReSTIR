@@ -54,5 +54,8 @@ namespace Mogwai
 
         bool mCaptureAllOutputs = false;
         std::unique_ptr<ImageProcessing> mpImageProcessing;
+
+        // Capture multiple outputs across frames with different stride
+
     };
 }

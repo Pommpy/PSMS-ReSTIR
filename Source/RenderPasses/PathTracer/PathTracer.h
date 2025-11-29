@@ -37,8 +37,11 @@
 #include "Rendering/Materials/TexLODTypes.slang"
 #include "Rendering/Utils/PixelStats.h"
 #include "Rendering/RTXDI/RTXDI.h"
-
+#include "../Falcor/Utils/Algorithm/PrefixSum.h"
 #include "Params.slang"
+
+#include "Rendering/PSMSReSTIR/SMS.h"
+#include "Rendering/PSMSReSTIR/PSMSReSTIR.h"
 
 using namespace Falcor;
 
@@ -99,6 +102,7 @@ private:
     void prepareMaterials(RenderContext* pRenderContext);
     bool prepareLighting(RenderContext* pRenderContext);
     void prepareRTXDI(RenderContext* pRenderContext);
+    void preparePSMSReSTIR(RenderContext* pRenderContext);
     void setNRDData(const ShaderVar& var, const RenderData& renderData) const;
     void bindShaderData(const ShaderVar& var, const RenderData& renderData, bool useLightSampling = true) const;
     bool renderRenderingUI(Gui::Widgets& widget);
@@ -114,6 +118,7 @@ private:
     */
     struct StaticParams
     {
+        bool hackDI = false;
         // Rendering parameters
         uint32_t    samplesPerPixel = 1;                        ///< Number of samples (paths) per pixel, unless a sample density map is used.
         uint32_t    maxSurfaceBounces = 0;                      ///< Max number of surface bounces (diffuse + specular + transmission), up to kMaxPathLenth. This will be initialized at startup.
@@ -131,6 +136,7 @@ private:
         float       misPowerExponent = 2.f;                     ///< MIS exponent for the power heuristic. This is only used when 'PowerExp' is chosen.
         EmissiveLightSamplerType emissiveSampler = EmissiveLightSamplerType::LightBVH;  ///< Emissive light sampler to use for NEE.
         bool        useRTXDI = false;                           ///< Use RTXDI for direct illumination.
+        bool        usePSMSReSTIR = true;                              ///< Use SMS for caustic paths.
 
         // Material parameters
         bool        useAlphaTest = true;                        ///< Use alpha testing on non-opaque triangles.
@@ -170,6 +176,8 @@ private:
     std::unique_ptr<EnvMapSampler>  mpEnvMapSampler;            ///< Environment map sampler or nullptr if not used.
     std::unique_ptr<EmissiveLightSampler> mpEmissiveSampler;    ///< Emissive light sampler or nullptr if not used.
     std::unique_ptr<RTXDI>          mpRTXDI;                    ///< RTXDI sampler for direct illumination or nullptr if not used.
+    std::unique_ptr<SMS>            mpSMS;
+    std::unique_ptr<PSMSReSTIRPass>     mpPSMSReSTIRPass;
     std::unique_ptr<PixelStats>     mpPixelStats;               ///< Utility class for collecting pixel stats.
     std::unique_ptr<PixelDebug>     mpPixelDebug;               ///< Utility class for pixel debugging (print in shaders).
 
@@ -204,4 +212,8 @@ private:
     ref<Buffer>                     mpSampleNRDPrimaryHitNeeOnDelta;///< Compact per-sample NEE on delta primary vertices data.
     ref<Buffer>                     mpSampleNRDEmission;        ///< Compact per-sample NRD emission data.
     ref<Buffer>                     mpSampleNRDReflectance;     ///< Compact per-sample NRD reflectance data.
+    ref<Buffer>                     mpSMSData;
+    int mSeedOffset = 0;
+
+    PSMSReSTIRPass::Options mPSMSReSTIROptions;
 };

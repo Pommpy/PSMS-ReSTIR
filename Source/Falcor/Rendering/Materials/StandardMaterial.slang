@@ -132,6 +132,115 @@ struct StandardMaterial : MaterialBase, IMaterial
         return StandardMaterialInstance(sf, d, emission);
     }
 
+    void getPositionAndNormalMap(out TextureHandle positionMap, out TextureHandle shadingNormalMap)
+    {
+        positionMap = data.texPositionMap;
+        shadingNormalMap = data.texShadingNormalMap;
+    }
+
+    float3 getSpecularReflectionAlbedo(const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod)
+    {
+        SamplerState s = ms.getTextureSampler(header.getDefaultTextureSamplerID());
+
+        float16_t IoR = header.getIoR();
+
+        // Calculate the specular reflectance for dielectrics from the IoR, as in the Disney BSDF [Burley 2015].
+        // UE4 uses 0.08 multiplied by a default specular value of 0.5, hence F0=0.04 as default. The default IoR=1.5 gives the same result.
+        float f = (IoR - 1.f) / (IoR + 1.f);
+        float F0 = f * f;
+
+        // Sample base color.
+        const float3 baseColor = ms.sampleTexture(data.texBaseColor, s, sd.uv, data.baseColor, lod).rgb;
+
+        // Sample the specular texture.
+        // Depending on the shading model this encodes the material parameters differently.
+        const float4 spec = ms.sampleTexture(data.texSpecular, s, sd.uv, data.specular, lod);
+
+        return lerp(float3(F0), baseColor, spec.b);
+    }
+
+    // A simplified version without considering the reflection of dielectrics
+    float3 getSpecularReflectionAlbedo()
+    {
+        return data.baseColor.rgb;
+    }
+
+    bool useNormalMap()
+    {
+        return data.getNormalMapType() != NormalMapType::None;
+    }
+
+    void getNormalAndDerivative(const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod, const uint hints, const ShadingDifferentialGeometry sdg, out float3 normal, out float3 dndu, out float3 dndv)
+    {
+        SamplerState ss = ms.getTextureSampler(header.getDefaultTextureSamplerID());
+
+        // Compute final shading frame.
+        ShadingFrame sf = sd.frame;
+
+        float3 encodedNormal = ms.sampleTexture(data.texNormalMap, ss, sd.uv, float4(0.f), lod).rgb;
+        float3 decodedNormal = encodedNormal * 2.f - 1.f;
+        sf = computeShadingFrameFromNormalMap(sd, data.getNormalMapType(), encodedNormal);
+
+        flipShadingNormal(sd, sf);
+        if (isAdjustShadingNormalEnabled(hints))
+        {
+            adjustShadingNormal(sd, sf);
+        }
+
+        // Compute normal derivatives in local space.
+        TextureHandle handle = ms.getResolvedTextureHandle(data.texNormalMap);
+        Texture2D<float4> tex = ms.materialTextures[handle.getTextureID()];
+        uint width, height;
+        tex.GetDimensions(width, height);
+        uint2 resolution = uint2(width, height);
+        float2 duv = rcp(float2(resolution));
+
+        float2 pos = (sd.uv - 0.5f * duv) * resolution;
+        pos = clamp(pos, float2(0.f), float2(resolution - 1));
+
+        uint2 p00 = uint2(floor(pos));
+        uint2 p11 = p00 + uint2(1, 1);
+        p00 = clamp(p00, uint2(0), resolution - 1);
+        p11 = clamp(p11, uint2(0), resolution - 1);
+        uint2 p10 = p00 + uint2(1, 0);
+        uint2 p01 = p00 + uint2(0, 1);
+
+        float2 w = pos - float2(p00);
+
+        float3 v00 = tex.Load(int3(p00, 0)).xyz;
+        float3 v10 = tex.Load(int3(p10, 0)).xyz;
+        float3 v01 = tex.Load(int3(p01, 0)).xyz;
+        float3 v11 = tex.Load(int3(p11, 0)).xyz;
+        float3 tmp = v01 + v10 - v11;
+        float3 du = 2.f * (v10 + v00 * (w.y - 1.f) - tmp * w.y) * float(resolution.x); // FIXME: resolution.x
+        float3 dv = 2.f * (v01 + v00 * (w.x - 1.f) - tmp * w.x) * float(resolution.x); // FIXME: resolution.x
+
+        // Compute shading frame derivatives.
+        ShadingFrame dFrameDu, dFrameDv;
+        float3 s = sdg.dpdu - sd.frame.N * dot(sdg.dpdu, sd.frame.N);
+        float invLenS = rsqrt(dot(s, s));
+        s *= invLenS;
+
+        dFrameDu.T = invLenS * (-sdg.dndu * dot(sd.frame.N, sdg.dpdu) - sd.frame.N * dot(sdg.dndu, sdg.dpdu));
+        dFrameDv.T = invLenS * (-sdg.dndv * dot(sd.frame.N, sdg.dpdu) - sd.frame.N * dot(sdg.dndv, sdg.dpdu));
+        dFrameDu.T -= s * dot(dFrameDu.T, s);
+        dFrameDv.T -= s * dot(dFrameDv.T, s);
+
+        dFrameDu.B = cross(sdg.dndu, s) + cross(sd.frame.N, dFrameDu.T);
+        dFrameDv.B = cross(sdg.dndv, s) + cross(sd.frame.N, dFrameDv.T);
+        dFrameDu.N = sdg.dndu;
+        dFrameDv.N = sdg.dndv;
+
+        // Compute normal derivatives in world space.
+        normal = sd.frame.fromLocal(decodedNormal);
+        float invLengthN = rsqrt(dot(normal, normal));
+        normal *= invLengthN;
+        dndu = invLengthN * (sd.frame.fromLocal(du) + dFrameDu.fromLocal(decodedNormal));
+        dndv = invLengthN * (sd.frame.fromLocal(dv) + dFrameDv.fromLocal(decodedNormal));
+        dndu -= normal * dot(normal, dndu);
+        dndv -= normal * dot(normal, dndv);
+    }
+
     [Differentiable]
     StandardMaterialInstance setupDiffMaterialInstance(out DiffMaterialData diffData, const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod, const uint hints)
     {

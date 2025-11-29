@@ -59,6 +59,7 @@ struct Scene
 {
     // Raytracing
     [root] RaytracingAccelerationStructure rtAccel;
+    [root] RaytracingAccelerationStructure prevRtAccel;
 
     // Instance transforms
     [root] StructuredBuffer<float4x4> worldMatrices;
@@ -483,13 +484,17 @@ struct Scene
         \param[out] Unpacked fetched vertices which can be used for further computations involving individual vertices.
         \return Interpolated vertex attributes.
     */
-    VertexData getVertexData(const GeometryInstanceID instanceID, const uint triangleIndex, const float3 barycentrics, out StaticVertexData vertices[3])
+    VertexData getVertexData(const GeometryInstanceID instanceID, const uint triangleIndex, const float3 barycentrics, out StaticVertexData vertices[3], bool isPrevFrame = false)
     {
         const uint3 vtxIndices = getIndices(instanceID, triangleIndex);
         vertices = { gScene.getVertex(vtxIndices[0]), gScene.getVertex(vtxIndices[1]), gScene.getVertex(vtxIndices[2]) };
 
-        const float4x4 worldMat = gScene.getWorldMatrix(instanceID);
-        const float3x3 worldInvTransposeMat = getInverseTransposeWorldMatrix(instanceID);
+        float4x4 worldMat;
+        float3x3 worldInvTransposeMat;
+        if (isPrevFrame) worldMat = gScene.getPrevWorldMatrix(instanceID);
+        else worldMat = gScene.getWorldMatrix(instanceID);
+        if (isPrevFrame) worldInvTransposeMat = gScene.getPrevInverseTransposeWorldMatrix(instanceID);
+        else worldInvTransposeMat = getInverseTransposeWorldMatrix(instanceID);
         const bool isFrontFaceCW = isObjectFrontFaceCW(instanceID);
         return computeVertexData(vertices, worldMat, worldInvTransposeMat, isFrontFaceCW, barycentrics);
     }
@@ -520,9 +525,9 @@ struct Scene
         \param[out] Unpacked fetched vertices which can be used for further computations involving individual vertices.
         \return Interpolated vertex attributes.
     */
-    VertexData getVertexData(const TriangleHit hit, out StaticVertexData vertices[3])
+    VertexData getVertexData(const TriangleHit hit, out StaticVertexData vertices[3], bool isPrevFrame = false)
     {
-        return getVertexData(hit.instanceID, hit.primitiveIndex, hit.getBarycentricWeights(), vertices);
+        return getVertexData(hit.instanceID, hit.primitiveIndex, hit.getBarycentricWeights(), vertices, isPrevFrame);
     }
 
     /** Returns the interpolated vertex attributes for a given hitpoint.
@@ -571,7 +576,7 @@ struct Scene
        \param[in] triangleIndex Index of the triangle in the given mesh.
        \param[in] barycentrics Barycentric coordinates in the triangle.
        \return Interpolated vertex attributes.
-   */
+    */
     VertexData getVertexDataRayCones(const GeometryInstanceID instanceID, const uint triangleIndex, const float3 barycentrics)
     {
         StaticVertexData triangleVertices[3];
@@ -970,6 +975,90 @@ struct Scene
     {
         TriangleCurvature_DirClosestDP tce = { rayDir };
         return computeCurvatureGeneric(instanceID, triangleIndex, tce);
+    }
+
+    ShadingDifferentialGeometry getDifferentialGeometry(TriangleHit hit)
+    {
+        // Fetch relevant information from mesh
+        float3 bary = hit.getBarycentricWeights();
+        const uint3 vtxIndices = getIndices(hit.instanceID, hit.primitiveIndex);
+        StaticVertexData vertices[3] = { getVertex(vtxIndices[0]), getVertex(vtxIndices[1]), getVertex(vtxIndices[2]) };
+
+        return getDifferentialGeometry(vertices, bary);
+    }
+
+    ShadingDifferentialGeometry getDifferentialGeometry(const StaticVertexData vertices[], float3 bary)
+    {
+        float2 uv0 = vertices[0].texCrd;
+        float2 uv1 = vertices[1].texCrd;
+        float2 uv2 = vertices[2].texCrd;
+        if (all(uv0 == 0.0f) && all(uv1 == 0.0f) && all(uv2 == 0.0f))
+        {
+            // Resort to a very basic triangle parameterization
+            uv1 = {1.0f, 0.0f};
+            uv2 = {0.0f, 1.0f};
+        }
+
+        float3 p0 = vertices[0].position;
+        float3 p1 = vertices[1].position;
+        float3 p2 = vertices[2].position;
+
+        float3 n0 = vertices[0].normal;
+        float3 n1 = vertices[1].normal;
+        float3 n2 = vertices[2].normal;
+
+        ShadingDifferentialGeometry sdg = {};
+
+        // Interpolate primary quantities
+        sdg.uv = bary[0] * uv0 + bary[1] + uv1 + bary[2] * uv2;
+        sdg.p  = bary[0] *  p0 + bary[1] *  p1 + bary[2] *  p2;
+        sdg.n  = bary[0] *  n0 + bary[1] *  n1 + bary[2] *  n2;
+        float il = 1.0f / length(sdg.n);
+        sdg.n *= il;
+
+        // Compute partial derivatives
+        sdg.dpdu = perp_stark(sdg.n);
+        sdg.dpdv = cross(sdg.n, sdg.dpdu);
+        sdg.dndu = {};
+        sdg.dndv = {};
+
+        float2 duv0 = uv1 - uv0;
+        float2 duv1 = uv2 - uv0;
+        float3  dp0 =  p1 -  p0;
+        float3  dp1 =  p2 -  p0;
+
+        sdg.dndu = (n1 - n0) * il;
+        sdg.dndv = (n2 - n0) * il;
+        sdg.dndu -= sdg.n * dot(sdg.n, sdg.dndu);
+        sdg.dndv -= sdg.n * dot(sdg.n, sdg.dndv);
+
+        float det = duv0.x * duv1.y - duv0.y * duv1.x;
+        if (det != 0.f)
+        {
+            float invDet = 1.0f / det;
+            sdg.dpdu = ( duv1.y * dp0 - duv0.y * dp1) * invDet;
+            sdg.dpdv = (-duv1.x * dp0 + duv0.x * dp1) * invDet;
+
+            float3 dndu = ( duv1.y * sdg.dndu - duv0.y * sdg.dndv) * invDet;
+            float3 dndv = (-duv1.x * sdg.dndu + duv0.x * sdg.dndv) * invDet;
+            sdg.dndu = dndu;
+            sdg.dndv = dndv;
+        }
+        else
+        {
+            sdg.dndu = float3(0.0f);
+            sdg.dndv = float3(0.0f);
+        }
+
+        // Initialize shading frame
+        sdg.s = normalize(sdg.dpdu - sdg.n * dot(sdg.n, sdg.dpdu));
+        if (all(sdg.dpdu == 0.0f))
+        {
+            sdg.s = perp_stark(sdg.n);
+        }
+        sdg.t = cross(sdg.n, sdg.s);
+
+        return sdg;
     }
 };
 

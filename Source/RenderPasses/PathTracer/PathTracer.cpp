@@ -43,6 +43,13 @@ namespace
     const std::string kInputMotionVectors = "mvec";
     const std::string kInputViewDir = "viewW";
     const std::string kInputSampleCount = "sampleCount";
+    const std::string kInputFrameS = "frameS";
+    const std::string kInputFrameT = "frameT";
+    const std::string kInputPosU = "posU";
+    const std::string kInputPosV = "posV";
+    const std::string kInputNormU = "normU";
+    const std::string kInputNormV = "normV";
+    const std::string kOutputDebugTex = "debugTex";
 
     const Falcor::ChannelList kInputChannels =
     {
@@ -50,6 +57,12 @@ namespace
         { kInputMotionVectors,  "gMotionVectors",   "Motion vector buffer (float format)", true /* optional */ },
         { kInputViewDir,        "gViewW",           "World-space view direction (xyz float format)", true /* optional */ },
         { kInputSampleCount,    "gSampleCount",     "Sample count buffer (integer format)", true /* optional */, ResourceFormat::R8Uint },
+        { kInputFrameS,         "gFrameS",          "Shading frame tangent along U", true /* optional */, ResourceFormat::RGBA32Float },
+        { kInputFrameT,         "gFrameT",          "Shading frame tangent along V", true /* optional */, ResourceFormat::RGBA32Float },
+        { kInputPosU,           "gPosU",            "Partial position derivative wrt. U", true /* optional */, ResourceFormat::RGBA32Float },
+        { kInputPosV,           "gPosV",            "Partial position derivative wrt. V", true /* optional */, ResourceFormat::RGBA32Float },
+        { kInputNormU,          "gNormU",           "Partial normal derivative wrt. U", true /* optional */, ResourceFormat::RGBA32Float },
+        { kInputNormV,          "gNormV",           "Partial normal derivative wrt. V", true /* optional */, ResourceFormat::RGBA32Float },
     };
 
     const std::string kOutputColor = "color";
@@ -108,6 +121,8 @@ namespace
         { kOutputNRDDeltaTransmissionPathLength,            "",     "Output delta transmission path length", true /* optional */, ResourceFormat::R16Float },
         { kOutputNRDDeltaTransmissionPosW,                  "",     "Output delta transmission position", true /* optional */, ResourceFormat::RGBA32Float },
         { kOutputNRDResidualRadianceHitDist,                "",     "Output residual color (linear) and hit distance", true /* optional */, ResourceFormat::RGBA32Float },
+    
+        { kOutputDebugTex,                                "",     "debug texture for ReSTIR", true /* optional */, ResourceFormat::RGBA32Float },
     };
 
     // Scripting options.
@@ -122,6 +137,9 @@ namespace
     const std::string kUseBSDFSampling = "useBSDFSampling";
     const std::string kUseRussianRoulette = "useRussianRoulette";
     const std::string kUseNEE = "useNEE";
+    const std::string kUsePSMSReSTIR = "usePSMSReSTIR";
+    const std::string kPSMSReSTIROptions = "PSMSReSTIROptions";
+    const std::string kHackDI = "hackDI";
     const std::string kUseMIS = "useMIS";
     const std::string kMISHeuristic = "misHeuristic";
     const std::string kMISPowerExponent = "misPowerExponent";
@@ -194,6 +212,8 @@ PathTracer::PathTracer(ref<Device> pDevice, const Properties& props)
 
     mpPixelStats = std::make_unique<PixelStats>(mpDevice);
     mpPixelDebug = std::make_unique<PixelDebug>(mpDevice);
+
+    //mpPrefixSum = std::make_unique<PrefixSum>(mpDevice);
 }
 
 void PathTracer::setProperties(const Properties& props)
@@ -225,6 +245,9 @@ void PathTracer::parseProperties(const Properties& props)
         else if (key == kUseBSDFSampling) mStaticParams.useBSDFSampling = value;
         else if (key == kUseRussianRoulette) mStaticParams.useRussianRoulette = value;
         else if (key == kUseNEE) mStaticParams.useNEE = value;
+        else if (key == kUsePSMSReSTIR) mStaticParams.usePSMSReSTIR = value;
+        else if (key == kPSMSReSTIROptions) mPSMSReSTIROptions = value;
+        else if (key == kHackDI) mStaticParams.hackDI = value;
         else if (key == kUseMIS) mStaticParams.useMIS = value;
         else if (key == kMISHeuristic) mStaticParams.misHeuristic = value;
         else if (key == kMISPowerExponent) mStaticParams.misPowerExponent = value;
@@ -350,6 +373,9 @@ Properties PathTracer::getProperties() const
     props[kUseBSDFSampling] = mStaticParams.useBSDFSampling;
     props[kUseRussianRoulette] = mStaticParams.useRussianRoulette;
     props[kUseNEE] = mStaticParams.useNEE;
+    props[kUsePSMSReSTIR] = mStaticParams.usePSMSReSTIR;
+    props[kPSMSReSTIROptions] = mPSMSReSTIROptions;
+    props[kHackDI] = mStaticParams.hackDI;
     props[kUseMIS] = mStaticParams.useMIS;
     props[kMISHeuristic] = mStaticParams.misHeuristic;
     props[kMISPowerExponent] = mStaticParams.misPowerExponent;
@@ -443,7 +469,6 @@ void PathTracer::setScene(RenderContext* pRenderContext, const ref<Scene>& pScen
     }
 }
 
-
 void PathTracer::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
     if (!beginFrame(pRenderContext, renderData)) return;
@@ -466,6 +491,14 @@ void PathTracer::execute(RenderContext* pRenderContext, const RenderData& render
     {
         const auto& pMotionVectors = renderData.getTexture(kInputMotionVectors);
         mpRTXDI->update(pRenderContext, pMotionVectors);
+    }
+
+    // Update Specular Manifold ReSTIR.
+    if (mpSMS && mpPSMSReSTIRPass)
+    {
+        const auto& pVbuffer = renderData.getTexture(kInputVBuffer);
+        const auto& pMotionVectors = renderData.getTexture(kInputMotionVectors);
+        mpPSMSReSTIRPass->update(pRenderContext, pVbuffer, pMotionVectors, mpSMS, mpEmissiveSampler, mpEnvMapSampler);
     }
 
     // Trace pass.
@@ -509,6 +542,7 @@ bool PathTracer::renderRenderingUI(Gui::Widgets& widget)
     bool dirty = false;
     bool runtimeDirty = false;
 
+    dirty |= widget.checkbox("Hack DI", mStaticParams.hackDI);
     if (mFixedSampleCount)
     {
         dirty |= widget.var("Samples/pixel", mStaticParams.samplesPerPixel, 1u, kMaxSamplesPerPixel);
@@ -595,6 +629,13 @@ bool PathTracer::renderRenderingUI(Gui::Widgets& widget)
         dirty |= widget.checkbox("Enabled", mStaticParams.useRTXDI);
         widget.tooltip("Use RTXDI for direct illumination.");
         if (mpRTXDI) dirty |= mpRTXDI->renderUI(group);
+    }
+
+    if (auto group = widget.group("PSMSReSTIR"))
+    {
+        dirty |= widget.checkbox("Enabled", mStaticParams.usePSMSReSTIR);
+        widget.tooltip("Use Specular Manifold ReSTIR for specular paths.");
+        if (mpPSMSReSTIRPass) dirty |= mpPSMSReSTIRPass->renderUI(group);
     }
 
     if (auto group = widget.group("Material controls"))
@@ -709,7 +750,7 @@ PathTracer::TracePass::TracePass(ref<Device> pDevice, const std::string& name, c
     desc.addShaderLibrary(kTracePassFilename);
     if (pDevice->getType() == Device::Type::D3D12 && useSER)
         desc.addCompilerArguments({ "-Xdxc", "-enable-lifetime-markers" });
-    desc.setMaxPayloadSize(160); // This is conservative but the required minimum is 140 bytes.
+    desc.setMaxPayloadSize(320); // This is conservative but the required minimum is 140 bytes.
     desc.setMaxAttributeSize(pScene->getRaytracingMaxAttributeSize());
     desc.setMaxTraceRecursionDepth(1);
     if (!pScene->hasProceduralGeometry()) desc.setRtPipelineFlags(RtPipelineFlags::SkipProceduralPrimitives);
@@ -1065,6 +1106,32 @@ void PathTracer::prepareRTXDI(RenderContext* pRenderContext)
     }
 }
 
+void PathTracer::preparePSMSReSTIR(RenderContext* pRenderContext)
+{
+    if (mStaticParams.usePSMSReSTIR)
+    {
+        if (!mpSMS)
+        {
+            if (auto tmpScene = dynamic_ref_cast<Scene>(mpScene))
+            {
+                mpSMS = std::make_unique<SMS>(tmpScene);
+            }
+        }
+        if (!mpPSMSReSTIRPass)
+        {
+            if (auto tmpScene = dynamic_ref_cast<Scene>(mpScene))
+            {
+                mpPSMSReSTIRPass = std::make_unique<PSMSReSTIRPass>(tmpScene, mPSMSReSTIROptions);
+            }
+        }
+    }
+    else
+    {
+        mpSMS = nullptr;
+        mpPSMSReSTIRPass = nullptr;
+    }
+}
+
 void PathTracer::setNRDData(const ShaderVar& var, const RenderData& renderData) const
 {
     var["sampleRadiance"] = mpSampleNRDRadiance;
@@ -1131,6 +1198,9 @@ void PathTracer::bindShaderData(const ShaderVar& var, const RenderData& renderDa
 
 bool PathTracer::beginFrame(RenderContext* pRenderContext, const RenderData& renderData)
 {
+    // Update the random seed.
+    mParams.seed = mParams.useFixedSeed ? mParams.fixedSeed : mParams.frameCount + mSeedOffset;
+
     const auto& pOutputColor = renderData.getTexture(kOutputColor);
     FALCOR_ASSERT(pOutputColor);
 
@@ -1242,6 +1312,19 @@ bool PathTracer::beginFrame(RenderContext* pRenderContext, const RenderData& ren
         mpPixelStats->setEnabled(true);
     }
 
+    // Prepare SMS.
+    preparePSMSReSTIR(pRenderContext);
+    if (mpSMS) mpSMS->prepareResources();
+    if (mpPSMSReSTIRPass)
+    {
+        mpPSMSReSTIRPass->setReSTIRParams(mParams.useFixedSeed, mParams.fixedSeed,
+            mParams.lodBias, mParams.specularRoughnessThreshold, mParams.frameDim, mParams.screenTiles, mParams.frameCount,
+            mParams.seed);
+        DefineList defines = mStaticParams.getDefines(*this);
+        mpPSMSReSTIRPass->setOwnerDefines(defines);
+        mpPSMSReSTIRPass->beginFrame(pRenderContext, mParams.frameDim, mParams.screenTiles, mRecompile);
+    }
+
     mpPixelStats->beginFrame(pRenderContext, mParams.frameDim);
     mpPixelDebug->beginFrame(pRenderContext, mParams.frameDim);
 
@@ -1278,6 +1361,12 @@ void PathTracer::endFrame(RenderContext* pRenderContext, const RenderData& rende
     copyTexture(renderData.getTexture(kOutputPathLength).get(), mpPixelStats->getPathLengthTexture().get());
 
     if (mpRTXDI) mpRTXDI->endFrame(pRenderContext);
+
+    if (mpPSMSReSTIRPass)
+    {
+        copyTexture(renderData.getTexture(kOutputDebugTex).get(), mpPSMSReSTIRPass->getDebugOutputTexture().get());
+        mpPSMSReSTIRPass->endFrame(pRenderContext);
+    }
 
     mVarsChanged = false;
     mParams.frameCount++;
@@ -1331,12 +1420,14 @@ void PathTracer::tracePass(RenderContext* pRenderContext, const RenderData& rend
 
     if (mVarsChanged) mpSampleGenerator->bindShaderData(var);
     if (mpRTXDI) mpRTXDI->bindShaderData(var);
+    if (mpSMS && mpPSMSReSTIRPass) mpPSMSReSTIRPass->bindShaderData(var);
 
     mpPixelStats->prepareProgram(tracePass.pProgram, var);
     mpPixelDebug->prepareProgram(tracePass.pProgram, var);
 
     // Bind the path tracer.
     var["gPathTracer"] = mpPathTracerBlock;
+    var["gPathTracer"]["hackDI"] = mStaticParams.hackDI;
 
     // Full screen dispatch.
     mpScene->raytrace(pRenderContext, tracePass.pProgram.get(), tracePass.pVars, uint3(mParams.frameDim, 1));
@@ -1408,6 +1499,7 @@ DefineList PathTracer::StaticParams::getDefines(const PathTracer& owner) const
     defines.add("USE_MIS", useMIS ? "1" : "0");
     defines.add("USE_RUSSIAN_ROULETTE", useRussianRoulette ? "1" : "0");
     defines.add("USE_RTXDI", useRTXDI ? "1" : "0");
+    defines.add("USE_SMS_RESTIR", usePSMSReSTIR ? "1" : "0");
     defines.add("USE_ALPHA_TEST", useAlphaTest ? "1" : "0");
     defines.add("USE_LIGHTS_IN_DIELECTRIC_VOLUMES", useLightsInDielectricVolumes ? "1" : "0");
     defines.add("DISABLE_CAUSTICS", disableCaustics ? "1" : "0");
@@ -1454,6 +1546,11 @@ DefineList PathTracer::StaticParams::getDefines(const PathTracer& owner) const
     defines.add("OUTPUT_GUIDE_DATA", "0");
     defines.add("OUTPUT_NRD_DATA", "0");
     defines.add("OUTPUT_NRD_ADDITIONAL_DATA", "0");
+
+    if (owner.mpPSMSReSTIRPass)
+    {
+        owner.mpPSMSReSTIRPass->setOwnerDefines(defines);
+    }
 
     return defines;
 }

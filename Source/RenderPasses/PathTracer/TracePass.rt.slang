@@ -60,6 +60,11 @@ struct PathPayload
     InteriorList interiorList;  ///< Interior list. Keeping track of a stack of materials with medium properties. The size depends on the config (4B/item).
     SampleGenerator sg;         ///< Sample generator state. Typically 4-16B.
 
+    float3 posW;
+    float3 normalW;
+    float3 prevPosW; // previous position in world space, used for volume sampling
+    float3 bsdfVal; // BSDF value at the current position, used for volume sampling
+
     static PathPayload pack(const PathState path)
     {
         PathPayload p = {};
@@ -83,6 +88,11 @@ struct PathPayload
         p.guideData = path.guideData;
         p.interiorList = path.interiorList;
         p.sg = path.sg;
+
+        p.posW = path.posW;
+        p.normalW = path.normalW;
+        p.prevPosW = path.prevPosW;
+        p.bsdfVal = path.bsdfVal;
 
         return p;
     }
@@ -112,7 +122,42 @@ struct PathPayload
         path.interiorList = p.interiorList;
         path.sg = p.sg;
 
+        path.posW = p.posW;
+        path.normalW = p.normalW;
+        path.prevPosW = p.prevPosW;
+        path.bsdfVal = p.bsdfVal;
+
         return path;
+    }
+
+    static void unpack(const PathPayload p, inout PathState path)
+    {
+        path.origin = asfloat(p.packed[0].xyz);
+        path.id = p.packed[0].w;
+
+        path.dir = asfloat(p.packed[1].xyz);
+        path.flagsAndVertexIndex = p.packed[1].w;
+
+        path.normal = asfloat(p.packed[2].xyz);
+        path.rejectedHits = uint16_t(p.packed[2].w & 0xffff);
+        path.sceneLength = float16_t(f16tof32(p.packed[2].w >> 16));
+
+        path.thp = asfloat(p.packed[3].xyz);
+        path.bounceCounters = p.packed[3].w;
+
+        path.L = asfloat(p.packed[4].xyz);
+        path.pdf = asfloat(p.packed[4].w);
+
+        path.hit = unpackHitInfo(p.hit);
+        path.guideData = p.guideData;
+        path.interiorList = p.interiorList;
+        path.sg = p.sg;
+
+        path.posW = p.posW;
+        path.normalW = p.normalW;
+        path.prevPosW = p.prevPosW;
+        path.bsdfVal = p.bsdfVal;
+
     }
 };
 
@@ -441,7 +486,8 @@ struct Scheduler
         if (!kUseAlphaTest) rayFlags |= RAY_FLAG_FORCE_OPAQUE;
         TraceRay(gScene.rtAccel, rayFlags, 0xff /* instanceInclusionMask */, kRayTypeScatter /* hitIdx */, getRayTypeCount(), kMissScatter /* missIdx */, ray.toRayDesc(), payload);
 
-        path = PathPayload::unpack(payload);
+        // path = PathPayload::unpack(payload);
+        PathPayload::unpack(payload, path);
     }
 
     /** Traces a path and write result to output.

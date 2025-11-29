@@ -153,6 +153,18 @@ namespace Falcor
         */
         ref<Texture> getDisplacementMap() const { return getTexture(TextureSlot::Displacement); }
 
+        void setPositionMap(const ref<Texture>& pPositionMap) { setTexture(TextureSlot::Position, pPositionMap); }
+
+        ref<Texture> getPositionMap() const { return getTexture(TextureSlot::Position); }
+
+        void setShadingNormalMap(const ref<Texture>& pShadingNormalMap) { setTexture(TextureSlot::ShadingNormal, pShadingNormalMap); }
+
+        ref<Texture> getShadingNormalMap() const { return getTexture(TextureSlot::ShadingNormal); }
+
+        void setFaceNormalMap(const ref<Texture>& pFaceNormalMap) { setTexture(TextureSlot::FaceNormal, pFaceNormalMap); }
+
+        ref<Texture> getFaceNormalMap() const { return getTexture(TextureSlot::FaceNormal); }
+
         /** Set the displacement scale.
         */
         void setDisplacementScale(float scale);

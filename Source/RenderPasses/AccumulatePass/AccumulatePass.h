@@ -102,6 +102,7 @@ public:
 protected:
     void prepareAccumulation(RenderContext* pRenderContext, uint32_t width, uint32_t height);
     void accumulate(RenderContext* pRenderContext, const ref<Texture>& pSrc, const ref<Texture>& pDst);
+    bool renderCapturingUI(Gui::Widgets& widget);
 
     // Internal state
 
@@ -148,6 +149,16 @@ protected:
     RenderPassHelpers::IOSize mOutputSizeSelection = RenderPassHelpers::IOSize::Default;
     /// Output size in pixels when 'Fixed' size is selected.
     uint2 mFixedOutputSize = {512, 512};
+
+    struct 
+    {
+        //bool enabled = false;
+        bool startCapturing = false;
+        uint frameAccumlated = 1u;
+        uint frameStride = 5u;
+        uint numCaptures = 200u;
+        std::string outputDir;
+    } mCaptureParams;
 };
 
 FALCOR_ENUM_REGISTER(AccumulatePass::Precision);

@@ -207,6 +207,9 @@ namespace Falcor
             updateTextureHandle(pOwner, TextureSlot::Transmission, mData.texTransmission);
             updateTextureHandle(pOwner, TextureSlot::Normal, mData.texNormalMap);
             updateTextureHandle(pOwner, TextureSlot::Displacement, mData.texDisplacementMap);
+            updateTextureHandle(pOwner, TextureSlot::Position, mData.texPositionMap);
+            updateTextureHandle(pOwner, TextureSlot::ShadingNormal, mData.texShadingNormalMap);
+            updateTextureHandle(pOwner, TextureSlot::FaceNormal, mData.texFaceNormalMap);
 
             // Update default sampler.
             updateDefaultTextureSamplerID(pOwner, mpDefaultSampler);
@@ -428,6 +431,18 @@ namespace Falcor
         case TextureSlot::Displacement:
         {
             // Nothing to do here, displacement texture is prepared when calling prepareDisplacementMap().
+            break;
+        }
+        case TextureSlot::Position:
+        {
+            break;
+        }
+        case TextureSlot::ShadingNormal:
+        {
+            break;
+        }
+        case TextureSlot::FaceNormal:
+        {
             break;
         }
         default:

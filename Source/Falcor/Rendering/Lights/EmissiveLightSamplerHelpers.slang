@@ -51,11 +51,11 @@ import Rendering.Lights.EmissiveLightSamplerInterface;
     \param[out] ls Light sample. Only valid if true is returned.
     \return True if a sample was generated, false otherwise.
 */
-bool sampleTriangle(const float3 posW, const uint triangleIndex, const float2 u, out TriangleLightSample ls)
+bool sampleTriangle(const float3 posW, const uint triangleIndex, const float2 u, out TriangleLightSample ls, bool isPrevFrame = false)
 {
     ls = {};
     ls.triangleIndex = triangleIndex;
-    const EmissiveTriangle tri = gScene.lightCollection.getTriangle(triangleIndex);
+    const EmissiveTriangle tri = gScene.lightCollection.getTriangle(triangleIndex, isPrevFrame);
 
     // Sample the triangle uniformly.
     const float3 barycentrics = sample_triangle(u);
@@ -89,6 +89,8 @@ bool sampleTriangle(const float3 posW, const uint triangleIndex, const float2 u,
     // Note: Guard against div-by-zero here by clamping.
     float denom = max(FLT_MIN, cosTheta * tri.area);
     ls.pdf = distSqr / denom;
+
+    ls.geometryTerm = cosTheta / distSqr;
 
     // Save light sample triangle barycentric coordinates
     ls.uv = u;

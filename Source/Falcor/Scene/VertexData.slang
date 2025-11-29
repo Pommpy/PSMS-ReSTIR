@@ -46,4 +46,17 @@ struct VertexData
     float  coneTexLODValue; ///< Texture LOD data for cone tracing. This is zero, unless getVertexDataRayCones() is used.
 };
 
+// TODO: Find better place for this.
+struct ShadingDifferentialGeometry
+{
+    float3 p;
+    float3 n, s, t;
+    float2 uv;
+
+    float3 dpdu;
+    float3 dpdv;
+    float3 dndu;
+    float3 dndv;
+};
+
 END_NAMESPACE_FALCOR

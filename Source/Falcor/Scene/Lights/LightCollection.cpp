@@ -106,6 +106,7 @@ namespace Falcor
         // Update light data if needed.
         if (!updatedLights.empty())
         {
+            std::swap(mpTriangleData, mpPrevTriangleData);
             updateTrianglePositions(pRenderContext, *mpScene, updatedLights);
             mUpdateFlagsSignal(UpdateFlags::MatrixChanged);
             return true;
@@ -269,12 +270,19 @@ namespace Falcor
         mpTriangleData->setName("LightCollection::mpTriangleData");
         if (mpTriangleData->getStructSize() != sizeof(PackedEmissiveTriangle)) FALCOR_THROW("Struct PackedEmissiveTriangle size mismatch between CPU/GPU");
 
+        mpPrevTriangleData = mpDevice->createStructuredBuffer(mpTriangleListBuilder->getRootVar()["gTriangleData"], mTriangleCount, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess, MemoryType::DeviceLocal, nullptr, false);
+        mpPrevTriangleData->setName("LightCollection::mpPrevTriangleData");
+        if (mpPrevTriangleData->getStructSize() != sizeof(PackedEmissiveTriangle)) FALCOR_THROW("Struct PackedEmissiveTriangle size mismatch between CPU/GPU");
+
         mpFluxData = mpDevice->createStructuredBuffer(mpFinalizeIntegration->getRootVar()["gFluxData"], mTriangleCount, ResourceBindFlags::ShaderResource | ResourceBindFlags::UnorderedAccess, MemoryType::DeviceLocal, nullptr, false);
         mpFluxData->setName("LightCollection::mpFluxData");
         if (mpFluxData->getStructSize() != sizeof(EmissiveFlux)) FALCOR_THROW("Struct EmissiveFlux size mismatch between CPU/GPU");
 
         // Compute triangle data (vertices, uv-coordinates, materialID) for all mesh lights.
         buildTriangleList(pRenderContext, scene);
+
+        // Copy triangle data to prevTriangleData
+        pRenderContext->copyResource(mpPrevTriangleData.get(), mpTriangleData.get());
     }
 
     void LightCollection::prepareMeshData(const Scene& scene)
@@ -303,14 +311,26 @@ namespace Falcor
         if (instanceCount > 0)
         {
             std::vector<uint32_t> triangleOffsets(instanceCount, MeshLightData::kInvalidIndex);
+            std::vector<uint2> sceneMeshPrimIDs;
             for (const auto& it : mMeshLights)
             {
                 FALCOR_ASSERT(it.instanceID < instanceCount);
                 triangleOffsets[it.instanceID] = it.triangleOffset;
+                for (uint32_t j = 0; j < it.triangleCount; j++)
+                {
+                    sceneMeshPrimIDs.push_back(uint2(it.instanceID, j));
+                }
             }
+            FALCOR_ASSERT(sceneMeshPrimIDs.size() == mTriangleCount);
 
             mpPerMeshInstanceOffset = mpDevice->createStructuredBuffer(sizeof(uint32_t), (uint32_t)triangleOffsets.size(), ResourceBindFlags::ShaderResource, MemoryType::DeviceLocal, triangleOffsets.data(), false);
             mpPerMeshInstanceOffset->setName("LightCollection::mpPerMeshInstanceOffset");
+
+            if (sceneMeshPrimIDs.size() > 0)
+            {
+                mpSceneMeshPrimIDList = mpDevice->createStructuredBuffer(sizeof(uint2), (uint32_t)sceneMeshPrimIDs.size(), ResourceBindFlags::ShaderResource, MemoryType::DeviceLocal, sceneMeshPrimIDs.data(), false);
+                mpSceneMeshPrimIDList->setName("LightCollection::mpSceneMeshPrimIDList");
+            }
         }
     }
 
@@ -585,12 +605,14 @@ namespace Falcor
 
         // Bind buffers.
         var["perMeshInstanceOffset"] = mpPerMeshInstanceOffset; // Can be nullptr
+        var["sceneMeshPrimIDList"] = mpSceneMeshPrimIDList;
 
         if (mTriangleCount > 0)
         {
             // These buffers must exist if triangle count is > 0.
             FALCOR_ASSERT(mpTriangleData && mpFluxData && mpMeshData);
             var["triangleData"] = mpTriangleData;
+            var["prevTriangleData"] = mpPrevTriangleData;
             var["fluxData"] = mpFluxData;
             var["meshData"] = mpMeshData;
 
@@ -606,6 +628,12 @@ namespace Falcor
         {
             FALCOR_ASSERT(mMeshLights.empty());
         }
+    }
+
+    void LightCollection::updateTriangleDataShaderBinding(const ShaderVar& var) const
+    {
+        var["triangleData"] = mpTriangleData;
+        var["prevTriangleData"] = mpPrevTriangleData;
     }
 
     void LightCollection::copyDataToStagingBuffer(RenderContext* pRenderContext) const
@@ -715,6 +743,7 @@ namespace Falcor
         if (mpFluxData) m += mpFluxData->getSize();
         if (mpMeshData) m += mpMeshData->getSize();
         if (mpPerMeshInstanceOffset) m += mpPerMeshInstanceOffset->getSize();
+        if (mpSceneMeshPrimIDList) m += mpSceneMeshPrimIDList->getSize();
         if (mpStagingBuffer) m += mpStagingBuffer->getSize();
         if (mIntegrator.pResultBuffer) m += mIntegrator.pResultBuffer->getSize();
         return m;

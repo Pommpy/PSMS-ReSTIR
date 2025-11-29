@@ -82,7 +82,11 @@ struct LightBVHSampler : IEmissiveLightSampler
         uint triangleIndex;
         float trianglePdf;
         float uLight = sampleNext1D(sg);
-        if (!sampleLightViaBVH(posW, normalW, upperHemisphere, uLight, trianglePdf, triangleIndex)) return false;
+        if (!sampleLightViaBVH(posW, normalW, upperHemisphere, uLight, trianglePdf, triangleIndex))
+        {
+            sampleNext2D(sg);
+            return false;
+        }
 
         // Sample a point on the triangle uniformly.
         float2 u = sampleNext2D(sg);
@@ -91,6 +95,13 @@ struct LightBVHSampler : IEmissiveLightSampler
         // The final probability density is the product of the sampling probabilities.
         ls.pdf *= trianglePdf;
         return true;
+    }
+
+    void skipRandomNumber<S : ISampleGenerator>(inout S sg)
+    {
+        if (gScene.lightCollection.isEmpty()) return;
+        sampleNext1D(sg);
+        sampleNext2D(sg);
     }
 
     /** Evaluate the PDF associated with selecting an emissive triangle.

@@ -11,6 +11,13 @@ def render_graph_VBufferRT():
     g.markOutput("VBufferRT.viewW")
     g.markOutput("VBufferRT.mask")
 
+    g.markOutput("VBufferRT.frameS")
+    g.markOutput("VBufferRT.frameT")
+    g.markOutput("VBufferRT.posU")
+    g.markOutput("VBufferRT.posV")
+    g.markOutput("VBufferRT.normU")
+    g.markOutput("VBufferRT.normV")
+
     return g
 
 VBufferRT = render_graph_VBufferRT()

@@ -55,6 +55,13 @@ const ChannelList kVBufferExtraChannels = {
     { "viewW",          "gViewW",           "View direction in world space",    true /* optional */, ResourceFormat::RGBA32Float }, // TODO: Switch to packed 2x16-bit snorm format.
     { "time",           "gTime",            "Per-pixel execution time",         true /* optional */, ResourceFormat::R32Uint     },
     { "mask",           "gMask",            "Mask",                             true /* optional */, ResourceFormat::R32Float    },
+
+    {"frameS",          "gFrameS",          "Shading frame tangent along U",      true /* optional */, ResourceFormat::RGBA32Float },
+    {"frameT",          "gFrameT",          "Shading frame tangent along V",      true /* optional */, ResourceFormat::RGBA32Float },
+    {"posU",            "gPosU",            "Partial position derivative wrt. U", true /* optional */, ResourceFormat::RGBA32Float },
+    {"posV",            "gPosV",            "Partial position derivative wrt. V", true /* optional */, ResourceFormat::RGBA32Float },
+    {"normU",           "gNormU",           "Partial normal derivative wrt. U",   true /* optional */, ResourceFormat::RGBA32Float },
+    {"normV",           "gNormV",           "Partial normal derivative wrt. V",   true /* optional */, ResourceFormat::RGBA32Float },
     // clang-format on
 };
 }; // namespace

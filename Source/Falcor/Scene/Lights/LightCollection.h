@@ -88,6 +88,7 @@ namespace Falcor
             \param[in] var The shader variable to set the data into.
         */
         void bindShaderData(const ShaderVar& var) const override;
+        void updateTriangleDataShaderBinding(const ShaderVar& var) const;
 
         /** Returns the total number of triangle lights (may include culled triangles).
         */
@@ -164,11 +165,13 @@ namespace Falcor
 
         // GPU resources for the mesh lights and emissive triangles.
         ref<Buffer>                             mpTriangleData;         ///< Per-triangle geometry data for emissive triangles (mTriangleCount elements).
+        ref<Buffer>                             mpPrevTriangleData;     ///< Per-triangle geometry data for emissive triangles in the previous frame (mTriangleCount elements).
         ref<Buffer>                             mpActiveTriangleList;   ///< List of active (non-culled) emissive triangle.
         ref<Buffer>                             mpTriToActiveList;      ///< Mapping of all light triangles to index in mActiveTriangleList.
         ref<Buffer>                             mpFluxData;             ///< Per-triangle flux data for emissive triangles (mTriangleCount elements).
         ref<Buffer>                             mpMeshData;             ///< Per-mesh data for emissive meshes (mMeshLights.size() elements).
         ref<Buffer>                             mpPerMeshInstanceOffset; ///< Per-mesh instance offset into emissive triangles array (Scene::getMeshInstanceCount() elements).
+        ref<Buffer>                             mpSceneMeshPrimIDList;  ///< Per-triangle lookup data for which scene mesh ID and primitive ID they are (mTriangleCount elements).
 
         mutable ref<Buffer>                     mpStagingBuffer;        ///< Staging buffer used for retrieving the vertex positions, texture coordinates and light IDs from the GPU.
         ref<Fence>                              mpStagingFence;         ///< Fence used for waiting on the staging buffer being filled in.

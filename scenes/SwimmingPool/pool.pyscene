@@ -1,0 +1,149 @@
+camera = Camera()
+camera.position = float3(16.3350, 15.3317, 0.5056)
+camera.target = float3(15.5627, 14.6965, 0.5059)
+camera.up = float3(0, 1, 0)
+camera.focalLength = 50
+sceneBuilder.addCamera(camera)
+
+pool_inside = Material('pool_inside')
+pool_inside.roughness = 1
+pool_inside.loadTexture(MaterialTextureSlot.BaseColor, 'textures/[2K]Tiles06/Tiles06_col.png')
+pool_inside.causticReceiver = True
+obj = TriangleMesh.createFromFile('meshes/pool_inside.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, pool_inside),
+    sceneBuilder.addNode('pool_inside', Transform())
+)
+
+water_plane = Material('water_plane')
+water_plane.specularTransmission = 1.0
+water_plane.indexOfRefraction = 1.33
+water_plane.thinSurface = True
+water_plane.loadTexture(MaterialTextureSlot.Normal, 'textures/normalmap_pool.exr', False)
+water_plane.loadTexture(MaterialTextureSlot.Position, 'textures/water_plane_position.exr', False)
+water_plane.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/water_plane_shading_normal.exr', False)
+# water_plane.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/normalmap_pool.exr.exr', False)
+water_plane.causticBouncer = True
+water_plane.causticBounces = 1
+obj = TriangleMesh.createFromFile('meshes/water_plane.obj')
+# obj = TriangleMesh.createFromFile('meshes/my_water_plane.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, water_plane),
+    sceneBuilder.addNode('water_plane', Transform())
+)
+
+pool_border = Material('pool_border')
+pool_border.roughness = 1
+pool_border.loadTexture(MaterialTextureSlot.BaseColor, 'textures/[2K]Tiles54/Tiles54_col.jpg')
+obj = TriangleMesh.createFromFile('meshes/pool_border.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, pool_border),
+    sceneBuilder.addNode('pool_border', Transform())
+)
+
+floor1 = Material('floor1')
+floor1.roughness = 1
+floor1.loadTexture(MaterialTextureSlot.BaseColor, 'textures/[2K]Tiles27/Tiles27_col.jpg')
+obj = TriangleMesh.createFromFile('meshes/floor1.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, floor1),
+    sceneBuilder.addNode('floor1', Transform())
+)
+
+floor2 = Material('floor2')
+floor2.roughness = 1
+floor2.loadTexture(MaterialTextureSlot.BaseColor, 'textures/[2K]Tiles50/Tiles50_col.jpg')
+obj = TriangleMesh.createFromFile('meshes/newFloor3.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, floor2),
+    sceneBuilder.addNode('floor2', Transform())
+)
+
+ladder_steps = Material('ladder_steps')
+ladder_steps.roughness = 0.1
+ladder_steps.metallic = 0
+ladder_steps.baseColor = float4(0.01, 0.01, 0.04, 1.0)
+obj = TriangleMesh.createFromFile('meshes/ladder_steps.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, ladder_steps),
+    sceneBuilder.addNode('ladder_steps', Transform())
+)
+
+ladder_metal = Material('ladder_metal')
+ladder_metal.roughness = 0.2
+obj = TriangleMesh.createFromFile('meshes/ladder_metal.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, ladder_metal),
+    sceneBuilder.addNode('ladder_metal', Transform())
+)
+
+chairs_wood = Material('chairs_wood')
+chairs_wood.roughness = 1
+chairs_wood.baseColor = float4(0.73, 0.58, 0.43, 1.0)
+obj = TriangleMesh.createFromFile('meshes/chairs_wood.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, chairs_wood),
+    sceneBuilder.addNode('chairs_wood', Transform())
+)
+
+chair_fabric_1 = Material('chair_fabric_1')
+chair_fabric_1.roughness = 1
+chair_fabric_1.loadTexture(MaterialTextureSlot.BaseColor, 'textures/Striped_cotton_01_2K_Base_Color.jpg')
+chair_fabric_1.loadTexture(MaterialTextureSlot.Normal, 'textures/Striped_cotton_01_2K_Normal.jpg')
+obj = TriangleMesh.createFromFile('meshes/chair_fabric_1.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, chair_fabric_1),
+    sceneBuilder.addNode('chair_fabric_1', Transform())
+)
+
+chair_fabric_2 = Material('chair_fabric_2')
+chair_fabric_2.roughness = 1
+chair_fabric_2.loadTexture(MaterialTextureSlot.BaseColor, 'textures/Striped_cotton_01_2K_Base_Color_2.jpg')
+chair_fabric_2.loadTexture(MaterialTextureSlot.Normal, 'textures/Striped_cotton_01_2K_Normal.jpg')
+obj = TriangleMesh.createFromFile('meshes/chair_fabric_2.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, chair_fabric_2),
+    sceneBuilder.addNode('chair_fabric_2', Transform())
+)
+
+umbrella_base = Material('umbrella_base')
+umbrella_base.roughness = 1
+umbrella_base.baseColor = float4(0.25, 0.25, 0.25, 1.0)
+obj = TriangleMesh.createFromFile('meshes/umbrella_base.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, umbrella_base),
+    sceneBuilder.addNode('umbrella_base', Transform())
+)
+
+umbrella_cylinders = Material('umbrella_cylinders')
+umbrella_cylinders.roughness = 1
+umbrella_cylinders.baseColor = float4(0.03, 0.03, 0.03, 1.0)
+obj = TriangleMesh.createFromFile('meshes/umbrella_cylinders.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, umbrella_cylinders),
+    sceneBuilder.addNode('umbrella_cylinders', Transform())
+)
+
+umbrella_top = Material('umbrella_top')
+umbrella_top.roughness = 1
+umbrella_top.loadTexture(MaterialTextureSlot.BaseColor, 'textures/siggraph_logo.png')
+umbrella_top.loadTexture(MaterialTextureSlot.Normal, 'textures/[2K]Fabric33/Fabric33_nrm.png')
+obj = TriangleMesh.createFromFile('meshes/umbrella_top.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, umbrella_top),
+    sceneBuilder.addNode('umbrella_top', Transform())
+)
+
+torus = Material('torus')
+torus.roughness = 1
+torus.baseColor = float4(0.8, 0.126, 0.407, 1.0)
+obj = TriangleMesh.createFromFile('meshes/torus.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, torus),
+    sceneBuilder.addNode('torus', Transform())
+)
+
+# sceneBuilder.envMap = EnvMap('textures/sunny_country_road_4k.hdr')
+sceneBuilder.envMap = EnvMap('textures/quarry_03_1k.hdr')
+# sceneBuilder.envMap = EnvMap('textures/quarry_03_1k_threshold20.hdr')
+# sceneBuilder.envMap = EnvMap('textures/quarry_03_1k_brightest_pixel_all_channels.hdr')

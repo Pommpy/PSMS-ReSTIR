@@ -48,6 +48,7 @@ struct MaterialHeader
     static constexpr uint kNestedPriorityBits = 4;
     static constexpr uint kLobeTypeBits = 8; // Only 6 bits needed if packing LobeType
     static constexpr uint kSamplerIDBits = 8;
+    static constexpr uint kCausticBouncesBits = 4;
     static constexpr uint kAlphaModeBits = 1;
     static constexpr uint kAlphaThresholdBits = 16; // Using float16_t format
     static constexpr uint kIoRBits = 16; // Using float16_t format
@@ -69,13 +70,16 @@ struct MaterialHeader
     static constexpr uint kSamplerIDOffset = kAlphaModeOffset + kAlphaModeBits;
     static constexpr uint kEnableLightProfileOffset = kSamplerIDOffset + kSamplerIDBits;
     static constexpr uint kDeltaSpecularFlagOffset = kEnableLightProfileOffset + 1;
-
-    static constexpr uint kTotalHeaderBitsY = kDeltaSpecularFlagOffset + 1;
+    static constexpr uint kCausticBouncerFlagOffset = kDeltaSpecularFlagOffset + 1;
+    static constexpr uint kCausticReceiverFlagOffset = kCausticBouncerFlagOffset + 1;
+    static constexpr uint kCausticReceiverInsideFlagOffset = kCausticReceiverFlagOffset + 1;
+    static constexpr uint kUVSpaceSamplingOffset = kCausticReceiverInsideFlagOffset + 1;
+    static constexpr uint kTotalHeaderBitsY = kUVSpaceSamplingOffset + 1;
 
     // packedData.z bit layout
     static constexpr uint kIoROffset = 0;
-
-    static constexpr uint kTotalHeaderBitsZ = kIoROffset + kIoRBits;
+    static constexpr uint kCausticBouncesOffset = kIoROffset + kIoRBits;
+    static constexpr uint kTotalHeaderBitsZ = kCausticBouncesOffset + kCausticBouncesBits;
 
     // packedData.w bit layout
     static constexpr uint kTotalHeaderBitsW = 0;
@@ -178,6 +182,24 @@ struct MaterialHeader
     /** Get delta specular flag. This flag is set if the material only has delta specular reflection/transmission (and can skip NEE).
     */
     bool isDeltaSpecular() CONST_FUNCTION { return packedData.y & (1u << kDeltaSpecularFlagOffset); }
+
+    SETTER_DECL void setCausticBouncer(bool bouncer) { packedData.y = PACK_BITS(1, kCausticBouncerFlagOffset, packedData.y, bouncer ? 1 : 0); }
+
+    bool isCausticBouncer() CONST_FUNCTION { return packedData.y & (1u << kCausticBouncerFlagOffset); }
+
+    SETTER_DECL void setCausticReceiver(bool receiver) { packedData.y = PACK_BITS(1, kCausticReceiverFlagOffset, packedData.y, receiver ? 1 : 0); }
+
+    bool isCausticReceiver() CONST_FUNCTION { return packedData.y & (1u << kCausticReceiverFlagOffset); }
+
+    SETTER_DECL void setCausticReceiverInside(bool inside) { packedData.y = PACK_BITS(1, kCausticReceiverInsideFlagOffset, packedData.y, inside ? 1 : 0); }
+    bool isCausticReceiverInside() CONST_FUNCTION { return packedData.y & (1u << kCausticReceiverInsideFlagOffset); }
+
+    SETTER_DECL void setUVSpaceSampling(bool uvSpace) { packedData.y = PACK_BITS(1, kUVSpaceSamplingOffset, packedData.y, uvSpace ? 1 : 0); }
+    bool isUVSpaceSampling() CONST_FUNCTION { return packedData.y & (1u << kUVSpaceSamplingOffset); }
+
+    SETTER_DECL void setCausticBounces(uint bounces) { packedData.z = PACK_BITS(kCausticBouncesBits, kCausticBouncesOffset, packedData.z, bounces); }
+
+    uint getCausticBounces() CONST_FUNCTION { return EXTRACT_BITS(kCausticBouncesBits, kCausticBouncesOffset, packedData.z); }
 
     /// Set index of refraction.
     SETTER_DECL void setIoR(float16_t ior) { packedData.z = PACK_BITS_UNSAFE(kIoRBits, kIoROffset, packedData.z, (uint)asuint16(ior)); }

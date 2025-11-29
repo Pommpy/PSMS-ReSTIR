@@ -126,6 +126,9 @@ RenderPassReflection AccumulatePass::reflect(const CompileData& compileData)
 
 void AccumulatePass::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
+    // Enable accumulation if capture for convergence plot is enabled.
+    mEnabled = mEnabled || mCaptureParams.startCapturing;
+
     if (mAutoReset)
     {
         // Query refresh flags passed down from the application and other passes.
@@ -215,6 +218,27 @@ void AccumulatePass::execute(RenderContext* pRenderContext, const RenderData& re
         logWarning("AccumulatePass unsupported I/O configuration. The output will be cleared.");
         pRenderContext->clearUAV(pDst->getUAV().get(), uint4(0));
     }
+
+	// Capture image to output folder
+    {
+        auto& dict = renderData.getDictionary();
+        if (mCaptureParams.startCapturing)
+        {
+            if (mCaptureParams.frameAccumlated % mCaptureParams.frameStride == 0)
+            {
+                auto ext = Bitmap::getFileExtFromResourceFormat(pDst->getFormat());
+                auto format = Bitmap::getFormatFromFileExtension(ext);
+                std::string filename = mCaptureParams.outputDir + "/" + "accumFrame" + std::to_string(mCaptureParams.frameAccumlated) + "." + ext;
+
+                logInfo("filename = " + filename);
+
+                pDst->captureToFile(0, 0, filename, format);
+            }
+
+            mCaptureParams.frameAccumlated++;
+            mCaptureParams.startCapturing = (mCaptureParams.frameAccumlated / mCaptureParams.frameStride) > mCaptureParams.numCaptures ? false : true;
+        }
+    }
 }
 
 void AccumulatePass::accumulate(RenderContext* pRenderContext, const ref<Texture>& pSrc, const ref<Texture>& pDst)
@@ -291,6 +315,35 @@ void AccumulatePass::accumulate(RenderContext* pRenderContext, const ref<Texture
     pRenderContext->dispatch(mpState.get(), mpVars.get(), numGroups);
 }
 
+bool AccumulatePass::renderCapturingUI(Gui::Widgets& widget)
+{
+    bool dirty = false;
+
+    if (auto group = widget.group("Capturing"))
+    {
+        dirty |= group.var("Frame stride", mCaptureParams.frameStride);
+        dirty |= group.var("Number of captures", mCaptureParams.numCaptures);
+        if (group.button("Start capturing"))
+        {
+            mCaptureParams.startCapturing = true;
+            mCaptureParams.frameAccumlated = 0;
+            dirty = true;
+        }
+        group.text("Output Directory\n" + mCaptureParams.outputDir);
+        if (group.button("Change folder"))
+        {
+            std::filesystem::path path;
+            if (chooseFolderDialog(path))
+            {
+                mCaptureParams.outputDir = path.string();
+                dirty = true;
+            }
+        }
+    }
+
+    return dirty;
+}
+
 void AccumulatePass::renderUI(Gui::Widgets& widget)
 {
     // Controls for output size.
@@ -346,6 +399,9 @@ void AccumulatePass::renderUI(Gui::Widgets& widget)
         const std::string text = std::string("Frames accumulated ") + std::to_string(mFrameCount);
         widget.text(text);
     }
+
+    // Capturing
+    renderCapturingUI(widget);
 }
 
 void AccumulatePass::setScene(RenderContext* pRenderContext, const ref<Scene>& pScene)

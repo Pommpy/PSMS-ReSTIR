@@ -109,4 +109,28 @@ struct PBRTConductorMaterial : MaterialBase, IMaterial
 
         return mi;
     }
+    void getPositionAndNormalMap(out TextureHandle positionMap, out TextureHandle shadingNormalMap)
+    {
+        return;
+    }
+
+    float3 getSpecularReflectionAlbedo(const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod)
+    {
+        return float3(1.f);
+    }
+
+    float3 getSpecularReflectionAlbedo()
+    {
+        return float3(1.f);
+    }
+
+    bool useNormalMap()
+    {
+        return false;
+    }
+
+    void getNormalAndDerivative( const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod, const uint hints, const ShadingDifferentialGeometry sdg, out float3 normal, out float3 dndu, out float3 dndv )
+    {
+        return;
+    }
 };

@@ -1,0 +1,109 @@
+camera = Camera()
+# camera.position = float3(6.11584, 3.80324, 4.59726)
+camera.position = float3(4.4284, 2.7020, 2.5617)
+camera.target = float3(3.6033, 2.3304, 2.1360)
+camera.up = float3(-0.00315989, 0.999993, -0.00179484)
+
+camera.position = float3(4.1060, 3.1089, 3.1204)
+camera.target = float3(3.4039, 2.6264, 2.5967)
+camera.up = float3(-0.0007, 1.0000, -0.0005)
+
+camera.position = float3(3.009096, 3.606013, 2.395111)
+camera.target = float3(-3.540612, -2.682601, -1.794717)
+camera.up = float3(0, 1.0000, 0)
+camera.focalLength = 39.597752
+sceneBuilder.addCamera(camera)
+
+plane_1 = Material('plane1')
+plane_1.specularTransmission = 1.0
+plane_1.indexOfRefraction = 1.5
+plane_1.thinSurface = True
+plane_1.causticBouncer = True
+plane_1.uvSpaceSampling = True
+plane_1.causticBounces = 2
+plane_1.loadTexture(MaterialTextureSlot.Position, 'textures/plane1_position_512.exr', False)
+plane_1.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/plane1_shading_normal_512.exr', False)
+plane_1.loadTexture(MaterialTextureSlot.FaceNormal, 'textures/plane1_face_normal_512.exr', False)
+
+plane_2 = Material('plane2')
+plane_2.specularTransmission = 1.0
+plane_2.indexOfRefraction = 1.5
+plane_2.thinSurface = True
+plane_2.causticBouncer = True
+plane_2.uvSpaceSampling = True
+plane_2.causticBounces = 2
+plane_2.loadTexture(MaterialTextureSlot.Position, 'textures/plane2_position.exr', False)
+plane_2.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/plane2_shading_normal.exr', False)
+plane_2.loadTexture(MaterialTextureSlot.FaceNormal, 'textures/plane2_face_normal.exr', False)
+
+planes_border = Material('border')
+planes_border.baseColor = float4(0.04, 0.04, 0.04, 1.0)
+planes_border.roughness = 1
+
+floor = Material('floor')
+floor.roughness = 1
+floor.loadTexture(MaterialTextureSlot.BaseColor, 'textures/Wood030_2K_Color.jpg')
+floor.causticReceiver = True
+
+light = Material('light')
+light.baseColor = float4(0, 0, 0, 1)
+light.emissiveColor = float3(100000, 100000, 100000)
+
+obj = TriangleMesh.createFromFile('models/plane_1.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, plane_1),
+    sceneBuilder.addNode('plane1', Transform())
+)
+
+obj = TriangleMesh.createFromFile('models/plane_2.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, plane_2),
+    sceneBuilder.addNode('plane2', Transform())
+)
+
+obj = TriangleMesh.createFromFile('models/planes_border.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, planes_border),
+    sceneBuilder.addNode('border', Transform())
+)
+
+obj = TriangleMesh.createFromFile('models/floor.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, floor),
+    sceneBuilder.addNode('floor', Transform())
+)
+
+# obj = TriangleMesh.createFromFile('models/light.obj')
+# sceneBuilder.addMeshInstance(
+#     sceneBuilder.addTriangleMesh(obj, light),
+#     sceneBuilder.addNode('light', Transform())
+# )
+
+# add camera animation
+# cameraAnimation = sceneBuilder.createAnimation(camera, "Camera0 Animation", 4)
+# tf_start = Transform()
+# tf_start.lookAt(camera.position, camera.target, camera.up)
+# tf_end = Transform()
+# horizontal_translation = float3(0.1, 0, 0)
+# tf_end.lookAt(camera.position + horizontal_translation, camera.target + horizontal_translation, camera.up)
+# cameraAnimation.addKeyframe(0, tf_start)
+# cameraAnimation.addKeyframe(2, tf_end)
+# cameraAnimation.addKeyframe(4, tf_start)
+sceneBuilder.selectedCamera = camera
+
+obj = TriangleMesh.createFromFile('models/light.obj')
+lightNodeId = sceneBuilder.addNode('light', Transform())
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, light),
+    lightNodeId
+)
+lightAnimation = Animation("light Animation", lightNodeId, 8)
+tf_start = Transform()
+tf_start.translation = float3(0.3, 0, 0)
+tf_end = Transform()
+lightAnimation.addKeyframe(0, tf_end)
+lightAnimation.addKeyframe(2, tf_start)
+lightAnimation.addKeyframe(4, tf_start)
+lightAnimation.addKeyframe(6, tf_end)
+lightAnimation.addKeyframe(8, tf_end)
+sceneBuilder.addAnimation(lightAnimation)

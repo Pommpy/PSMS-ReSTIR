@@ -70,6 +70,10 @@ __exported import Utils.Sampling.SampleGeneratorInterface;
             return false;
         }
 
+        void skipRandomNumber<S : ISampleGenerator>(inout S sg)
+        {
+        }
+
         float evalTriangleSelectionPdf(const float3 posW, const float3 normalW, const bool upperHemisphere, const uint triangleIndex)
         {
             return 0.f;

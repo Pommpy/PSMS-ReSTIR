@@ -74,6 +74,16 @@ interface IMaterial
     /** Returns volume properties that are homogeneous for the whole volume (do not depend on the hitpoint).
      */
     VolumeProperties getHomogeneousVolumeProperties(const MaterialSystem ms, const uint materialID);
+
+    void getPositionAndNormalMap(out TextureHandle positionMap, out TextureHandle shadingNormalMap);
+
+    float3 getSpecularReflectionAlbedo(const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod);
+
+    float3 getSpecularReflectionAlbedo();
+
+    bool useNormalMap();
+
+    void getNormalAndDerivative(const MaterialSystem ms, const ShadingData sd, const ITextureSampler lod, const uint hints, const ShadingDifferentialGeometry sdg, out float3 normal, out float3 dndu, out float3 dndv);
 }
 
 [open]

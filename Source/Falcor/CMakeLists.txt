@@ -297,6 +297,29 @@ target_sources(Falcor PRIVATE
     Rendering/RTXDI/RTXDISetup.cs.slang
     Rendering/RTXDI/SurfaceData.slang
 
+    Rendering/PSMSReSTIR/BuildPriorDistribution.cs.slang
+    Rendering/PSMSReSTIR/InitialSampling.cs.slang
+    Rendering/PSMSReSTIR/LoadShadingData.slang
+    Rendering/PSMSReSTIR/Params.slang
+    Rendering/PSMSReSTIR/PathState.slang
+    Rendering/PSMSReSTIR/ReflectTypes.cs.slang
+    Rendering/PSMSReSTIR/Reservoir.slang
+    Rendering/PSMSReSTIR/PSMSReSTIR.cpp
+    Rendering/PSMSReSTIR/PSMSReSTIR.h
+    Rendering/PSMSReSTIR/ReSTIR.slang
+    Rendering/PSMSReSTIR/ReSTIRCommon.slang
+    Rendering/PSMSReSTIR/Shift.slang
+    Rendering/PSMSReSTIR/SMS.cpp
+    Rendering/PSMSReSTIR/SMS.h
+    Rendering/PSMSReSTIR/SMS.slang
+    Rendering/PSMSReSTIR/SpatialResampling.cs.slang
+    Rendering/PSMSReSTIR/StaticParams.slang
+    Rendering/PSMSReSTIR/TemporalResampling.cs.slang
+    Rendering/PSMSReSTIR/TraceReceiver.cs.slang
+    Rendering/PSMSReSTIR/Resolve.cs.slang
+    Rendering/PSMSReSTIR/WriteToEnvBuffer.cs.slang
+
+
     Rendering/Utils/PixelStats.cpp
     Rendering/Utils/PixelStats.cs.slang
     Rendering/Utils/PixelStats.h
@@ -523,6 +546,13 @@ target_sources(Falcor PRIVATE
     Scene/SDFs/SDFVoxelCommon.slang
     Scene/SDFs/SDFVoxelHitUtils.slang
     Scene/SDFs/SDFVoxelTypes.slang
+
+    Scene/SpecularShapes/ISpecularShapeCollection.h
+    Scene/SpecularShapes/SpecularShapeCollection.h
+    Scene/SpecularShapes/SpecularShapeCollection.cpp
+    Scene/SpecularShapes/SpecularShapeCollection.slang
+    Scene/SpecularShapes/SpecularShapeCollectionShared.slang
+    Scene/SpecularShapes/SpecularShapeData.slang
 
     Scene/Volume/BC4Encode.h
     Scene/Volume/BrickedGrid.h

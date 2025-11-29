@@ -82,7 +82,9 @@ namespace Falcor
             Transmission,
             Displacement,
             Index, // For MERLMix material
-
+            Position,
+            ShadingNormal,
+            FaceNormal,
             Count // Must be last
         };
 
@@ -179,6 +181,24 @@ namespace Falcor
         */
         virtual bool isThinSurface() const { return mHeader.isThinSurface(); }
 
+        virtual void setCausticBouncer(bool causticBouncer);
+
+        virtual bool isCausticBouncer() const { return mHeader.isCausticBouncer(); }
+
+        virtual void setCausticReceiver(bool causticReceiver);
+
+        virtual bool isCausticReceiver() const { return mHeader.isCausticReceiver(); }
+
+        virtual void setCausticReceiverInside(bool causticReceiverInside);
+        
+        virtual bool isCausticReceiverInside() const { return mHeader.isCausticReceiverInside(); }
+
+        virtual void setCausticBounces(uint32_t causticBounces);
+
+        virtual uint32_t getCausticBounces() const { return mHeader.getCausticBounces(); }
+
+        virtual void setUVSpaceSampling(bool uvSpaceSampling);
+        virtual bool isUVSpaceSampling() const { return mHeader.isUVSpaceSampling(); }
         /** Set the alpha mode.
         */
         virtual void setAlphaMode(AlphaMode alphaMode);
@@ -402,6 +422,9 @@ namespace Falcor
             tostr(Transmission);
             tostr(Displacement);
             tostr(Index);
+            tostr(Position);
+            tostr(ShadingNormal);
+            tostr(FaceNormal);
 #undef tostr
         default:
             FALCOR_THROW("Invalid texture slot");

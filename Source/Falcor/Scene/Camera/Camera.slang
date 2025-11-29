@@ -34,6 +34,7 @@ struct Camera
     CameraData data;
 
     float3 getPosition() { return data.posW; }
+    float3 getPosition(bool usePrev) { return usePrev ? data.prevPosW : data.posW; }
     float4x4 getViewProj() { return data.viewProjMat; }
 
     /** Computes a camera ray for a given pixel assuming a pinhole camera model.

@@ -46,13 +46,15 @@ struct LightCollection
 
     // These buffers are only valid if triangleCount > 0.
     [root] StructuredBuffer<PackedEmissiveTriangle> triangleData;       ///< Per-triangle geometry data for emissive triangles.
+    [root] StructuredBuffer<PackedEmissiveTriangle> prevTriangleData;   ///< Per-triangle geometry data for emissive triangles in the previous frame.
 
     StructuredBuffer<uint>                      activeTriangles;        ///< Indices of all active (non-culled) emissive triangles. This is only valid if activeTriangleCount > 0.
     StructuredBuffer<uint>                      triToActiveMapping;     ///< Mapping from triangle index to active triangle index. kInvalidIndex if triangle is not active.
     StructuredBuffer<EmissiveFlux>              fluxData;               ///< Per-triangle flux data for emissive triangles.
     StructuredBuffer<MeshLightData>             meshData;               ///< Per-mesh data for emissive meshes.
     StructuredBuffer<uint>                      perMeshInstanceOffset;  ///< Per-mesh instance offset into emissive triangles array, or kInvalidIndex if mesh has no emissive triangles.
-
+    // for kUseReSTIR
+    StructuredBuffer<uint2>                     sceneMeshPrimIDList;    ///< Per-triangle lookup data for which scene mesh ID and primitive ID they are>
 
     static const uint kInvalidIndex = 0xffffffff;
 
@@ -75,9 +77,10 @@ struct LightCollection
         \param[in] triIdx Emissive triangle index.
         \return Emissive triangle data.
     */
-    EmissiveTriangle getTriangle(uint triIdx)
+    EmissiveTriangle getTriangle(uint triIdx, bool isPrevFrame = false)
     {
-        return triangleData[triIdx].unpack();
+        if (isPrevFrame) return prevTriangleData[triIdx].unpack();
+        else return triangleData[triIdx].unpack();
     }
 
     /** Returns the average radiance for a given triangle.
@@ -99,6 +102,12 @@ struct LightCollection
     {
         uint offset = perMeshInstanceOffset[instanceID.index];
         return offset != kInvalidIndex ? offset + primitiveIndex : kInvalidIndex;
+    }
+
+    // for kUseReSTIR
+    uint2 getSceneMeshPrimID(uint triIdx)
+    {
+        return sceneMeshPrimIDList[triIdx];
     }
 
     /** Return active triangle index for a given triangle.

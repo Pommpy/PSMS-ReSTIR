@@ -64,7 +64,8 @@ enum class PathFlags
     deltaTransmissionPath       = 0x0800,   ///< Path started with and followed delta transmission events (whenever possible - TIR could be an exception) until it hit the first non-delta event.
     deltaOnlyPath               = 0x1000,   ///< There was no non-delta events along the path so far.
 
-    // Bits 14 to kPathFlagsBitCount are still unused.
+    rough                       = 0x4000,   ///< classified as a rough path vertex for ReSTIR
+    causticBouncer              = 0x8000,   ///< classified as a caustic bouncer path vertex for ReSTIR
 };
 
 /** Bounce types. We keep separate counters for all of these.
@@ -103,6 +104,11 @@ struct PathState
     InteriorList interiorList;          ///< Interior list. Keeping track of a stack of materials with medium properties.
     SampleGenerator sg;                 ///< Sample generator state. Typically 4-16B.
 
+    float3 posW;
+    float3 normalW;
+    float3 prevPosW;
+    float3 bsdfVal;
+
     // Accessors
 
     bool isTerminated() { return !isActive(); }
@@ -127,6 +133,8 @@ struct PathState
     bool isDeltaReflectionPrimaryHit() { return hasFlag(PathFlags::deltaReflectionPrimaryHit); }
     bool isDeltaTransmissionPath() { return hasFlag(PathFlags::deltaTransmissionPath); }
     bool isDeltaOnlyPath() { return hasFlag(PathFlags::deltaOnlyPath); }
+    bool isRough() { return hasFlag(PathFlags::rough); }
+    bool isCausticBouncer() { return hasFlag(PathFlags::causticBouncer); }
 
     // Check if the scatter event is samplable by the light sampling technique.
     bool isLightSamplable() { return !isDelta(); }
@@ -152,6 +160,8 @@ struct PathState
     [mutating] void setDeltaReflectionPrimaryHit(bool value = true) { setFlag(PathFlags::deltaReflectionPrimaryHit, value); }
     [mutating] void setDeltaTransmissionPath(bool value = true) { setFlag(PathFlags::deltaTransmissionPath, value); }
     [mutating] void setDeltaOnlyPath(bool value = true) { setFlag(PathFlags::deltaOnlyPath, value); }
+    [mutating] void setRough(bool value = true) { setFlag(PathFlags::rough, value); }
+    [mutating] void setCausticBouncer(bool value = true) { setFlag(PathFlags::causticBouncer, value); }
 
     bool hasFlag(PathFlags flag)
     {

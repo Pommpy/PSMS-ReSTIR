@@ -38,6 +38,14 @@ RWTexture2D<float4> gViewW;
 RWTexture2D<uint> gTime;
 RWTexture2D<float> gMask;
 
+// Added channels.
+RWTexture2D<float4> gFrameS;
+RWTexture2D<float4> gFrameT;
+RWTexture2D<float4> gPosU;
+RWTexture2D<float4> gPosV;
+RWTexture2D<float4> gNormU;
+RWTexture2D<float4> gNormV;
+
 #define is_valid(name) (is_valid_##name != 0)
 
 #if !defined(COMPUTE_DEPTH_OF_FIELD) || !defined(USE_ALPHA_TEST) || !defined(RAY_FLAGS)
@@ -62,7 +70,7 @@ struct VBufferRT
         }
         else
         {
-            return gScene.camera.computeRayPinhole(pixel, frameDim);
+            return gScene.camera.computeRayPinhole(pixel, frameDim, false);
         }
     }
 
@@ -75,9 +83,14 @@ struct VBufferRT
         float3 prevPosW = float3(0.f);
         float2 motionVector = float2(0.f);
 
+        ShadingDifferentialGeometry sdg = {};
+
         if (hit.getType() == HitType::Triangle)
         {
             const TriangleHit triangleHit = hit.getTriangleHit();
+
+            sdg = gScene.getDifferentialGeometry(triangleHit);
+
             v = gScene.getVertexData(triangleHit);
             prevPosW = gScene.getPrevPosW(triangleHit);
         }
@@ -112,7 +125,8 @@ struct VBufferRT
             float2 pixelPos = pixel + float2(0.5f, 0.5f);
             float4 prevPosH = mul(gScene.camera.data.prevViewProjMatNoJitter, float4(prevPosW, 1.f));
             // Remove camera jitter from motion vector
-            motionVector = calcMotionVector(pixelPos, prevPosH, frameDim) + float2(gScene.camera.data.jitterX, -gScene.camera.data.jitterY);
+            //motionVector = calcMotionVector(pixelPos, prevPosH, frameDim) + float2(gScene.camera.data.jitterX, -gScene.camera.data.jitterY);
+            motionVector = calcMotionVector(pixelPos, prevPosH, frameDim);
         }
 
         if (is_valid(gDepth))
@@ -121,6 +135,19 @@ struct VBufferRT
             gMotionVector[pixel] = motionVector;
         if (is_valid(gMask))
             gMask[pixel] = 1.0f;
+
+        if (is_valid(gFrameS))
+            gFrameS[pixel] = float4(sdg.s, 1.0f);
+        if (is_valid(gFrameT))
+            gFrameT[pixel] = float4(sdg.t, 1.0f);
+        if (is_valid(gPosU))
+            gPosU[pixel] = float4(sdg.dpdu, 1.0f);
+        if (is_valid(gPosV))
+            gPosV[pixel] = float4(sdg.dpdv, 1.0f);
+        if (is_valid(gNormU))
+            gNormU[pixel] = float4(sdg.dndu, 1.0f);
+        if (is_valid(gNormV))
+            gNormV[pixel] = float4(sdg.dndv, 1.0f);
     }
 
     void writeMiss(uint2 pixel, float3 rayOrigin, float3 rayDir)

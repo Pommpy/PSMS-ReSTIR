@@ -74,6 +74,13 @@ struct EmissiveUniformSampler : IEmissiveLightSampler
         return true;
     }
 
+    void skipRandomNumber<S : ISampleGenerator>(inout S sg)
+    {
+        if (gScene.lightCollection.getActiveTriangleCount() == 0) return;
+        sampleNext1D(sg);
+        sampleNext2D(sg);
+    }
+
     /** Evaluate the PDF associated with selecting an emissive triangle.
         \param[in] posW Shading point in world space.
         \param[in] normalW Normal at the shading point in world space.

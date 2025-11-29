@@ -1,0 +1,62 @@
+camera = Camera()
+
+camera.position = float3(-3.000000, 40.000000, 40.000000)
+camera.target = float3(-2.999999, 32.928932, 32.928932)
+camera.up = float3(0, 1, 0)
+camera.focalLength = 50
+sceneBuilder.addCamera(camera)
+
+plane = Material('plane')
+plane.roughness = 0.0
+plane.metallic = 1.0
+plane.baseColor = float4(1.0, 0.766, 0.336, 1.0)
+plane.loadTexture(MaterialTextureSlot.Normal, 'textures/normalmap_gaussian.exr', False)
+plane.loadTexture(MaterialTextureSlot.Position, 'textures/position.exr', False)
+plane.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/shading_normal.exr', False)
+plane.indexOfRefraction = 1.0
+plane.causticBouncer = True
+plane.causticBounces = 1
+plane.uvSpaceSampling = True
+
+floor = Material('floor')
+floor.roughness = 1
+floor.loadTexture(MaterialTextureSlot.BaseColor, 'textures/[2K]Tiles71/Tiles71_col.jpg')
+trans = Transform()
+trans.scaling = float3(0.25)
+floor.textureTransform = trans
+floor.causticReceiver = True
+
+light = Material('light')
+light.baseColor = float4(0, 0, 0, 1)
+light.emissiveColor = float3(100000, 100000, 100000)
+
+obj = TriangleMesh.createFromFile('models/plane.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, plane),
+    sceneBuilder.addNode('plane', Transform())
+)
+
+obj = TriangleMesh.createFromFile('models/floor.obj')
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, floor),
+    sceneBuilder.addNode('floor', Transform())
+)
+
+obj = TriangleMesh.createFromFile('models/light.obj')
+lightNodeId = sceneBuilder.addNode('light', Transform())
+sceneBuilder.addMeshInstance(
+    sceneBuilder.addTriangleMesh(obj, light),
+    lightNodeId
+)
+
+# add light animation
+lightAnimation = Animation('light animation', lightNodeId, 8)
+tf_init = Transform()
+tf_light = Transform()
+tf_light.translation = float3(10, 0, 0)
+lightAnimation.addKeyframe(0, tf_init)
+lightAnimation.addKeyframe(2, tf_light)
+lightAnimation.addKeyframe(4, tf_light)
+lightAnimation.addKeyframe(6, tf_init)
+lightAnimation.addKeyframe(8, tf_init)
+sceneBuilder.addAnimation(lightAnimation)

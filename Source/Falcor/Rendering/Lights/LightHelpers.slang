@@ -280,6 +280,19 @@ bool sampleLight<S : ISampleGenerator>(const float3 shadingPosW, const LightData
     }
 }
 
+void analyticLightSampleSkipRandomNumber<S : ISampleGenerator>(LightData light, inout S sg)
+{
+    switch (light.type)
+    {
+    case LightType::Rect:
+    case LightType::Sphere:
+    case LightType::Disc:
+    case LightType::Distant:
+        sampleNext2D(sg);
+    default:
+    }
+}
+
 /** Evaluates a light approximately. This is useful for raster passes that don't use stochastic integration.
     For now only point and directional light sources are supported.
     \param[in] shadingPosW Shading point in world space.

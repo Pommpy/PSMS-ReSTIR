@@ -97,6 +97,21 @@ namespace Falcor
             widget.var("Alpha threshold", alphaThreshold);
         }
 
+        bool bouncer = isCausticBouncer();
+        if (widget.checkbox("Specular Manifold Sampling: Bouncer", bouncer)) setCausticBouncer(bouncer);
+
+        bool receiver = isCausticReceiver();
+        if (widget.checkbox("Specular Manifold Sampling: Receiver", receiver)) setCausticReceiver(receiver);
+
+        bool causticReceiverInside = isCausticReceiverInside();
+        if (widget.checkbox("Specular Manifold Sampling: Receiver Inside", causticReceiverInside)) setCausticReceiverInside(causticReceiverInside);
+
+        bool uvSpaceSampling = isUVSpaceSampling();
+        if (widget.checkbox("Specular Manifold Sampling: UV Space Sampling", uvSpaceSampling)) setUVSpaceSampling(uvSpaceSampling);
+
+        uint32_t causticBounces = getCausticBounces();
+        if (widget.var("Specular Manifold Sampling: Bounces", causticBounces, 0u, (1u << MaterialHeader::kCausticBouncesBits) - 1)) setCausticBounces(causticBounces);
+
         uint32_t nestedPriority = getNestedPriority();
         if (widget.var("Nested priority", nestedPriority, 0u, (1u << MaterialHeader::kNestedPriorityBits) - 1)) setNestedPriority(nestedPriority);
 
@@ -121,6 +136,51 @@ namespace Falcor
         if (mHeader.isThinSurface() != thinSurface)
         {
             mHeader.setThinSurface(thinSurface);
+            markUpdates(UpdateFlags::DataChanged);
+        }
+    }
+
+    void Material::setCausticBouncer(bool causticBouncer)
+    {
+        if (mHeader.isCausticBouncer() != causticBouncer)
+        {
+            mHeader.setCausticBouncer(causticBouncer);
+            markUpdates(UpdateFlags::DataChanged);
+        }
+    }
+
+    void Material::setCausticReceiver(bool causticReceiver)
+    {
+        if (mHeader.isCausticReceiver() != causticReceiver)
+        {
+            mHeader.setCausticReceiver(causticReceiver);
+            markUpdates(UpdateFlags::DataChanged);
+        }
+    }
+
+    void Material::setCausticReceiverInside(bool causticReceiverInside)
+    {
+        if (mHeader.isCausticReceiverInside() != causticReceiverInside)
+        {
+            mHeader.setCausticReceiverInside(causticReceiverInside);
+            markUpdates(UpdateFlags::DataChanged);
+        }
+    }
+
+    void Material::setUVSpaceSampling(bool uvSpaceSampling)
+    {
+        if (mHeader.isUVSpaceSampling() != uvSpaceSampling)
+        {
+            mHeader.setUVSpaceSampling(uvSpaceSampling);
+            markUpdates(UpdateFlags::DataChanged);
+        }
+    }
+
+    void Material::setCausticBounces(uint32_t causticBounces)
+    {
+        if (mHeader.getCausticBounces() != causticBounces)
+        {
+            mHeader.setCausticBounces(causticBounces);
             markUpdates(UpdateFlags::DataChanged);
         }
     }
@@ -381,6 +441,9 @@ namespace Falcor
         textureSlot.value("Normal", Material::TextureSlot::Normal);
         textureSlot.value("Transmission", Material::TextureSlot::Transmission);
         textureSlot.value("Displacement", Material::TextureSlot::Displacement);
+        textureSlot.value("Position", Material::TextureSlot::Position);
+        textureSlot.value("ShadingNormal", Material::TextureSlot::ShadingNormal);
+        textureSlot.value("FaceNormal", Material::TextureSlot::FaceNormal);
         textureSlot.value("Index", Material::TextureSlot::Index);
 
         // Register Material base class as IMaterial in python to allow deprecated script syntax.
@@ -390,6 +453,11 @@ namespace Falcor
         material.def_property("name", &Material::getName, &Material::setName);
         material.def_property("doubleSided", &Material::isDoubleSided, &Material::setDoubleSided);
         material.def_property("thinSurface", &Material::isThinSurface, &Material::setThinSurface);
+        material.def_property("causticBouncer", &Material::isCausticBouncer, &Material::setCausticBouncer);
+        material.def_property("causticReceiver", &Material::isCausticReceiver, &Material::setCausticReceiver);
+        material.def_property("causticReceiverInside", &Material::isCausticReceiverInside, &Material::setCausticReceiverInside);
+        material.def_property("uvSpaceSampling", &Material::isUVSpaceSampling, &Material::setUVSpaceSampling);
+        material.def_property("causticBounces", &Material::getCausticBounces, &Material::setCausticBounces);
         material.def_property_readonly("emissive", &Material::isEmissive);
         material.def_property("alphaMode", &Material::getAlphaMode, &Material::setAlphaMode);
         material.def_property("alphaThreshold", &Material::getAlphaThreshold, &Material::setAlphaThreshold);

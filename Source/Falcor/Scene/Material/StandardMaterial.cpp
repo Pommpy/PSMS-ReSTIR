@@ -50,6 +50,9 @@ namespace Falcor
         mTextureSlotInfo[(uint32_t)TextureSlot::Normal] = { "normal", TextureChannelFlags::RGB, false };
         mTextureSlotInfo[(uint32_t)TextureSlot::Emissive] = { "emissive", TextureChannelFlags::RGB, true };
         mTextureSlotInfo[(uint32_t)TextureSlot::Transmission] = { "transmission", TextureChannelFlags::RGB, true };
+        mTextureSlotInfo[(uint32_t)TextureSlot::Position] = { "position", TextureChannelFlags::RGB, false };
+        mTextureSlotInfo[(uint32_t)TextureSlot::ShadingNormal] = { "shadingnormal", TextureChannelFlags::RGB, false };
+        mTextureSlotInfo[(uint32_t)TextureSlot::FaceNormal] = { "facenormal", TextureChannelFlags::RGB, false };
     }
 
     bool StandardMaterial::renderUI(Gui::Widgets& widget)
@@ -75,6 +78,30 @@ namespace Falcor
         {
             float3 emissiveColor = getEmissiveColor();
             if (widget.var("Emissive color", emissiveColor, 0.f, 1.f, 0.01f)) setEmissiveColor(emissiveColor);
+        }
+
+        if (auto pTexture = getPositionMap())
+        {
+            widget.text("Position Map: " + pTexture->getSourcePath().string());
+            widget.text("Texture info: " + std::to_string(pTexture->getWidth()) + "x" + std::to_string(pTexture->getHeight()) + " (" + to_string(pTexture->getFormat()) + ")");
+            widget.image("Position Map", pTexture.get(), float2(100.f));
+            if (widget.button("Remove texture##Transmission")) setTransmissionTexture(nullptr);
+        }
+
+        if (auto pTexture = getShadingNormalMap())
+        {
+            widget.text("Shading Normal Map: " + pTexture->getSourcePath().string());
+            widget.text("Texture info: " + std::to_string(pTexture->getWidth()) + "x" + std::to_string(pTexture->getHeight()) + " (" + to_string(pTexture->getFormat()) + ")");
+            widget.image("Shading Normal Map", pTexture.get(), float2(100.f));
+            if (widget.button("Remove texture##Transmission")) setTransmissionTexture(nullptr);
+        }
+
+        if (auto pTexture = getFaceNormalMap())
+        {
+            widget.text("Face Normal Map: " + pTexture->getSourcePath().string());
+            widget.text("Texture info: " + std::to_string(pTexture->getWidth()) + "x" + std::to_string(pTexture->getHeight()) + " (" + to_string(pTexture->getFormat()) + ")");
+            widget.image("Face Normal Map", pTexture.get(), float2(100.f));
+            if (widget.button("Remove texture##Transmission")) setTransmissionTexture(nullptr);
         }
 
         float emissiveFactor = getEmissiveFactor();

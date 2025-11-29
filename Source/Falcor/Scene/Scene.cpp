@@ -360,6 +360,10 @@ namespace Falcor
 
             mSceneStats.emissiveMemoryInBytes = mpLightCollection->getMemoryUsageInBytes();
         }
+        else
+        {
+            mpLightCollection->updateTriangleDataShaderBinding(mpSceneBlock->getRootVar()["lightCollection"]);
+        }
         return mpLightCollection;
     }
 
@@ -3707,10 +3711,19 @@ namespace Falcor
 
     void Scene::invalidateTlasCache()
     {
-        for (auto& tlas : mTlasCache)
+        //for (auto& tlas : mTlasCache)
+        //{
+        //    tlas.second.pTlasObject = nullptr;
+        //}
+
+        mFrameIndex = 1 - mFrameIndex;
+        for (uint32_t rtc : mTlasRayTypeCounts)
         {
-            tlas.second.pTlasObject = nullptr;
+            // current frame caches: 2*rtc1-fi, 2*rtc2-fi, 2*rtc3-fi, ...
+            // prev frame caches: 2*rtc1-1+fi, 2*rtc2-1+fi, 2*rtc3-1+fi, ...
+            mTlasCache[2 * rtc - mFrameIndex].pTlasObject = nullptr;
         }
+
         mTlasLastBuiltRayCount = 0;
     }
 
@@ -3719,7 +3732,8 @@ namespace Falcor
         FALCOR_PROFILE(pRenderContext, "buildTlas");
 
         TlasData tlas;
-        auto it = mTlasCache.find(rayTypeCount);
+        //auto it = mTlasCache.find(rayTypeCount);
+        auto it = mTlasCache.find(2 * rayTypeCount - mFrameIndex);
         if (it != mTlasCache.end()) tlas = it->second;
 
         // Prepare instance descs.
@@ -3807,9 +3821,11 @@ namespace Falcor
         pRenderContext->buildAccelerationStructure(asDesc, 0, nullptr);
         pRenderContext->uavBarrier(tlas.pTlasBuffer.get());
 
-        mTlasCache[rayTypeCount] = tlas;
+        //mTlasCache[rayTypeCount] = tlas;
+        mTlasCache[2 * rayTypeCount - mFrameIndex] = tlas;
+        mTlasRayTypeCounts.insert(rayTypeCount);
         updateRaytracingTLASStats();
-        mTlasLastBuiltRayCount = rayTypeCount;
+        //mTlasLastBuiltRayCount = rayTypeCount;
     }
 
     void Scene::bindShaderDataForRaytracing(RenderContext* pRenderContext, const ShaderVar& sceneVar, uint32_t rayTypeCount)
@@ -3832,20 +3848,34 @@ namespace Falcor
         // The raytracing shader table has one hit record per ray type and geometry. We need to know the ray type count in order to setup the indexing properly.
         // Note that for DXR 1.1 ray queries, the shader table is not used and the ray type count doesn't matter and can be set to zero.
         //
-        auto tlasIt = mTlasCache.find(rayTypeCount);
+        //auto tlasIt = mTlasCache.find(rayTypeCount);
+        auto tlasIt = mTlasCache.find(2 * rayTypeCount - mFrameIndex);
         if (tlasIt == mTlasCache.end() || !tlasIt->second.pTlasObject)
         {
             // We need a hit entry per mesh right now to pass GeometryIndex()
             buildTlas(pRenderContext, rayTypeCount, true);
 
             // If new TLAS was just created, get it so the iterator is valid
-            if (tlasIt == mTlasCache.end()) tlasIt = mTlasCache.find(rayTypeCount);
+            //if (tlasIt == mTlasCache.end()) tlasIt = mTlasCache.find(rayTypeCount);
+            if (tlasIt == mTlasCache.end()) tlasIt = mTlasCache.find(2 * rayTypeCount - mFrameIndex);
         }
         FALCOR_ASSERT(mpSceneBlock);
 
         // Bind TLAS.
         FALCOR_ASSERT(tlasIt != mTlasCache.end() && tlasIt->second.pTlasObject)
         mpSceneBlock->getRootVar()["rtAccel"].setAccelerationStructure(tlasIt->second.pTlasObject);
+
+        // Bind previous TLAS.
+        auto tlasItPrev = mTlasCache.find(2 * rayTypeCount - 1 + mFrameIndex);
+        if (tlasItPrev != mTlasCache.end() && tlasItPrev->second.pTlasObject)
+        {
+            mpSceneBlock->getRootVar()["prevRtAccel"].setAccelerationStructure(tlasItPrev->second.pTlasObject);
+        }
+        else
+        {
+            // If we don't have previous Tlas, just use current frame Tlas
+            mpSceneBlock->getRootVar()["prevRtAccel"].setAccelerationStructure(tlasIt->second.pTlasObject);
+        }
 
         // Bind Scene parameter block.
         getCamera()->bindShaderData(mpSceneBlock->getRootVar()[kCamera]); // TODO REMOVE: Shouldn't be needed anymore?
