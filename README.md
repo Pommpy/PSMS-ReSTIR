@@ -1,4 +1,38 @@
-![](docs/images/teaser.png)
+# PSMS ReSTIR
+![](docs/images/myteaser.png)
+
+# Introduction
+This repository contains the source code for our **SIGGRAPH Asia 2025** paper:
+
+**Sample Space Partitioning and Spatiotemporal Resampling for Specular Manifold Sampling**  
+*Pengpei Hong (University of Utah), Meng Duan (Nankai University), Beibei Wang (Nankai University),  
+Cem Yuksel (University of Utah), Tizian Zeltner (NVIDIA), Daqi Lin (NVIDIA)*
+
+🔗 **NVIDIA Real-Time Graphics Research Page:**  
+https://research.nvidia.com/labs/rtr/publication/hong2025partition/
+
+---
+
+The method is implemented in Falcor 8.0 as a rendering module named **PSMSReSTIR** (Partitioned SMS ReSTIR).  
+After building the project, run `YourBuildDirectory/bin/Release/Mogwai.exe`. Then choose a script from the `scripts/` directory to load the desired scene.
+
+The **DoubleRefractiveSlabs** and **ReflectivePlane** scenes include animations with a moving light source.  
+To disable animation, press **F9** in Mogwai and click the **stop** button.
+
+# Custom Models
+
+Our method supports two sampling domains: **UV space** and **directional space**.
+
+## UV Space
+
+UV-space sampling assumes that the model has a well-behaved UV parametrization. A continuous UV parametrization ensures that the convergence basins of the specular manifold are continuous in UV space. (For example, we use simple planar models in our experiments.) 
+
+To sample surface positions, provide a **position map** that converts UV coordinates into world-space positions.  
+
+## Directional Space
+
+We also provide a directional-space implementation, which supports more general models without any parametrization requirements (UV coordinates are always required). The **SwimmingPool** scene in `scenes/SwimmingPool/pool.pyscene` is run in directional space.
+
 
 # Falcor
 

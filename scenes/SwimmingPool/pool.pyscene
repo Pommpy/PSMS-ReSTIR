@@ -19,10 +19,7 @@ water_plane = Material('water_plane')
 water_plane.specularTransmission = 1.0
 water_plane.indexOfRefraction = 1.33
 water_plane.thinSurface = True
-water_plane.loadTexture(MaterialTextureSlot.Normal, 'textures/normalmap_pool.exr', False)
-water_plane.loadTexture(MaterialTextureSlot.Position, 'textures/water_plane_position.exr', False)
 water_plane.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/water_plane_shading_normal.exr', False)
-# water_plane.loadTexture(MaterialTextureSlot.ShadingNormal, 'textures/normalmap_pool.exr.exr', False)
 water_plane.causticBouncer = True
 water_plane.causticBounces = 1
 obj = TriangleMesh.createFromFile('meshes/water_plane.obj')
