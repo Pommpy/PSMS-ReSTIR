@@ -8,6 +8,8 @@ This repository contains the source code for our **SIGGRAPH Asia 2025** paper:
 *Pengpei Hong (University of Utah), Meng Duan (Nankai University), Beibei Wang (Nankai University),  
 Cem Yuksel (University of Utah), Tizian Zeltner (NVIDIA), Daqi Lin (NVIDIA)*
 
+🔗 **Utah Graphics Research Page:**  
+(https://graphics.cs.utah.edu/research/projects/psms-restir/) <br>
 🔗 **NVIDIA Real-Time Graphics Research Page:**  
 https://research.nvidia.com/labs/rtr/publication/hong2025partition/
 
